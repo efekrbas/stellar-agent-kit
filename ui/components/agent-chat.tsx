@@ -2,15 +2,32 @@
 
 import { useState, useRef, useEffect } from "react"
 import { Plus, ChevronDown, ArrowUp, X } from "lucide-react"
+import { signTransaction } from "@stellar/freighter-api"
+import { Networks } from "@stellar/stellar-sdk"
+import { useAccount } from "@/hooks/use-account"
+import { useSoroSwap } from "@/hooks/use-soroswap"
+import { toast } from "sonner"
 
 type Message = { role: "user" | "assistant"; content: string }
 
+/** Quote returned by the agent when it ran get_swap_quote (for Execute button). */
+type AgentQuote = {
+  expectedIn: string
+  expectedOut: string
+  minOut: string
+  route: string[]
+  rawData?: unknown
+}
+
 export function AgentChat() {
+  const { account } = useAccount()
+  const { buildSwap, submitSwap, isLoading: swapLoading } = useSoroSwap()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [pendingQuote, setPendingQuote] = useState<AgentQuote | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -23,6 +40,7 @@ export function AgentChat() {
     if (!text || loading) return
     setInput("")
     setError(null)
+    setPendingQuote(null)
     const userMessage: Message = { role: "user", content: text }
     setMessages((prev) => [...prev, userMessage])
     setLoading(true)
@@ -34,9 +52,16 @@ export function AgentChat() {
       const res = await fetch("/api/agent/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: chatMessages }),
+        body: JSON.stringify({
+          messages: chatMessages,
+          publicAddress: account?.publicKey ?? undefined,
+        }),
       })
-      const data = (await res.json()) as { content?: string; error?: string }
+      const data = (await res.json()) as {
+        content?: string
+        error?: string
+        quote?: AgentQuote
+      }
       if (!res.ok) {
         throw new Error(data.error || `Request failed: ${res.status}`)
       }
@@ -44,12 +69,44 @@ export function AgentChat() {
         ...prev,
         { role: "assistant", content: data.content ?? "No response." },
       ])
+      if (data.quote) setPendingQuote(data.quote)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       setError(msg)
       setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${msg}` }])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const executePendingSwap = async () => {
+    if (!account || !pendingQuote) return
+    try {
+      const network = "mainnet"
+      const { xdr } = await buildSwap(pendingQuote, account.publicKey, network)
+      const networkPassphrase = Networks.PUBLIC
+      const signResult = await signTransaction(xdr, { networkPassphrase })
+      if (signResult.error) {
+        if (
+          signResult.error.message?.toLowerCase().includes("rejected") ||
+          signResult.error.message?.toLowerCase().includes("denied")
+        ) {
+          toast.info("Swap cancelled")
+        } else {
+          toast.error("Signing failed", { description: signResult.error.message })
+        }
+        return
+      }
+      if (!signResult.signedTxXdr) {
+        toast.error("Wallet did not return a signed transaction")
+        return
+      }
+      const result = await submitSwap(signResult.signedTxXdr, network)
+      toast.success("Swap executed", { description: `Tx: ${result.hash.slice(0, 8)}...` })
+      setPendingQuote(null)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error("Swap failed", { description: msg })
     }
   }
 
@@ -115,7 +172,11 @@ export function AgentChat() {
                 send()
               }
             }}
-            placeholder="Ask the agent to check balance or get a quote..."
+            placeholder={
+              account
+                ? "Ask for balance or swap (e.g. swap 1 XLM for USDC)..."
+                : "Connect your wallet so the agent can use your address, or ask for a quote..."
+            }
             className="w-full flex-1 min-h-[88px] resize-none bg-transparent px-4 pt-4 pb-2 text-white placeholder:text-zinc-500 focus:outline-none text-sm sm:text-base"
             disabled={loading}
             rows={3}
@@ -149,6 +210,32 @@ export function AgentChat() {
           </div>
         </form>
       </div>
+
+      {/* Approve swap: show when agent returned a quote and user is connected */}
+      {pendingQuote && account && (
+        <div className="shrink-0 rounded-xl border border-zinc-700 bg-zinc-900/80 p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <p className="text-sm text-zinc-300">
+            Quote ready. Approve in your wallet to execute the swap.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setPendingQuote(null)}
+              className="px-3 py-2 rounded-lg text-sm text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 transition-colors"
+            >
+              Dismiss
+            </button>
+            <button
+              type="button"
+              onClick={executePendingSwap}
+              disabled={swapLoading}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-[#5100fd] text-white hover:bg-[#6100ff] disabled:opacity-50 transition-colors"
+            >
+              {swapLoading ? "Building…" : "Approve swap"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Error strip */}
       {error && (

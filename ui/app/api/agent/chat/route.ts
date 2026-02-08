@@ -10,9 +10,19 @@ const MAINNET_XLM = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA"
 const MAINNET_USDC = "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75"
 
 type ChatMessage =
+  | { role: "system"; content: string }
   | { role: "user"; content: string }
   | { role: "assistant"; content: string | null; tool_calls?: Array<{ id: string; type: "function"; function: { name: string; arguments: string } }> }
   | { role: "tool"; tool_call_id: string; content: string }
+
+/** Quote payload returned when the agent ran get_swap_quote (for in-chat Execute). */
+export type AgentChatQuote = {
+  expectedIn: string
+  expectedOut: string
+  minOut: string
+  route: string[]
+  rawData?: unknown
+}
 
 const TOOLS: Array<{
   type: "function"
@@ -49,11 +59,16 @@ const TOOLS: Array<{
   },
 ]
 
-async function runTool(name: string, args: Record<string, unknown>): Promise<string> {
+async function runTool(
+  name: string,
+  args: Record<string, unknown>,
+  publicAddress?: string | null
+): Promise<string> {
   const config = getNetworkConfig()
   try {
     if (name === "check_balance") {
-      const address = String(args.address ?? "").trim()
+      let address = String(args.address ?? "").trim()
+      if (!address && publicAddress) address = publicAddress.trim()
       if (!address || address.length !== 56 || !address.startsWith("G")) {
         return JSON.stringify({ error: "Invalid Stellar address. Use a 56-character key starting with G." })
       }
@@ -64,28 +79,41 @@ async function runTool(name: string, args: Record<string, unknown>): Promise<str
     if (name === "get_swap_quote") {
       const fromAsset = String(args.fromAsset ?? "").trim().toUpperCase()
       const toAsset = String(args.toAsset ?? "").trim().toUpperCase()
-      const amount = String(args.amount ?? "").trim()
+      const amountStr = String(args.amount ?? "").trim()
       const fromId = fromAsset === "XLM" ? MAINNET_XLM : fromAsset === "USDC" ? MAINNET_USDC : null
       const toId = toAsset === "XLM" ? MAINNET_XLM : toAsset === "USDC" ? MAINNET_USDC : null
       if (!fromId || !toId) {
         return JSON.stringify({ error: "Use XLM or USDC for fromAsset and toAsset on mainnet." })
+      }
+      // SoroSwap expects amount in raw units (7 decimals for XLM/USDC). LLM usually sends display amount (e.g. "1").
+      const amountNum = parseFloat(amountStr)
+      const rawAmount =
+        Number.isNaN(amountNum) || amountNum <= 0
+          ? ""
+          : amountStr.length >= 7 && /^\d+$/.test(amountStr)
+            ? amountStr
+            : Math.round(amountNum * 1e7).toString()
+      if (!rawAmount) {
+        return JSON.stringify({ error: "Invalid amount. Use a positive number (e.g. 1 for 1 XLM)." })
       }
       const apiKey = process.env.SOROSWAP_API_KEY
       const client = new SoroSwapClient(config, apiKey)
       const quote = await client.getQuote(
         { contractId: fromId },
         { contractId: toId },
-        amount
+        rawAmount
       )
       return JSON.stringify({
         fromAsset,
         toAsset,
-        amount,
+        amount: amountStr,
+        expectedIn: quote.expectedIn,
         expectedOut: quote.expectedOut,
         minOut: quote.minOut,
         route: quote.route,
         protocol: quote.protocol,
-        note: "To execute the swap, use the Swap tab and connect your wallet.",
+        rawData: quote.rawData ?? quote,
+        note: "You can tell the user they can execute this swap with the Approve button below.",
       })
     }
     return JSON.stringify({ error: `Unknown tool: ${name}` })
@@ -142,12 +170,14 @@ async function groqChat(
 async function executeAgentTurn(
   apiKey: string,
   messages: ChatMessage[],
-  assistantMessage: ChatMessage
-): Promise<string> {
+  assistantMessage: ChatMessage,
+  publicAddress?: string | null
+): Promise<{ content: string; quote?: AgentChatQuote }> {
   if (!assistantMessage.tool_calls?.length) {
-    return assistantMessage.content ?? "No response."
+    return { content: assistantMessage.content ?? "No response." }
   }
   const current: ChatMessage[] = [...messages, assistantMessage]
+  let lastQuote: AgentChatQuote | undefined
   for (const tc of assistantMessage.tool_calls) {
     let args: Record<string, unknown> = {}
     try {
@@ -155,18 +185,39 @@ async function executeAgentTurn(
     } catch {
       args = {}
     }
-    const result = await runTool(tc.function.name, args)
+    const result = await runTool(tc.function.name, args, publicAddress)
+    if (tc.function.name === "get_swap_quote") {
+      try {
+        const parsed = JSON.parse(result) as Record<string, unknown>
+        if (parsed.expectedOut != null && !parsed.error) {
+          lastQuote = {
+            expectedIn: String(parsed.expectedIn ?? parsed.amount ?? "0"),
+            expectedOut: String(parsed.expectedOut),
+            minOut: String(parsed.minOut ?? parsed.expectedOut),
+            route: Array.isArray(parsed.route) ? (parsed.route as string[]) : [],
+            rawData: parsed.rawData,
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
     current.push({ role: "tool", tool_call_id: tc.id, content: result })
   }
   const next = await groqChat(apiKey, current)
   const nextMsg = next.message as ChatMessage
-  return executeAgentTurn(apiKey, current, nextMsg)
+  const recursive = await executeAgentTurn(apiKey, current, nextMsg, publicAddress)
+  return {
+    content: recursive.content,
+    quote: recursive.quote ?? lastQuote,
+  }
 }
 
 /**
  * POST /api/agent/chat
- * Body: { messages: ChatMessage[] }
- * Returns: { content: string } or { error: string }
+ * Body: { messages: ChatMessage[], publicAddress?: string }
+ * Returns: { content: string, quote?: AgentChatQuote } or { error: string }
+ * When publicAddress is sent (connected wallet), the agent uses it for balance and swap; optional quote is returned when the agent ran get_swap_quote so the UI can show Approve.
  * Requires GROQ_API_KEY in env.
  */
 export async function POST(request: NextRequest) {
@@ -178,18 +229,43 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       )
     }
-    const { messages } = (await request.json()) as { messages?: ChatMessage[] }
+    const { messages, publicAddress } = (await request.json()) as {
+      messages?: ChatMessage[]
+      publicAddress?: string | null
+    }
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
         { error: "Body must include messages array with at least one message." },
         { status: 400 }
       )
     }
-    const response = await groqChat(apiKey, messages)
+    const normalizedAddress =
+      typeof publicAddress === "string" ? publicAddress.trim() : null
+    const hasValidAddress =
+      normalizedAddress?.length === 56 && normalizedAddress.startsWith("G")
+    const oneToolRule =
+      "Call only one tool per response. For swap requests call get_swap_quote only; do not call check_balance in the same response."
+    const addressContext = hasValidAddress
+      ? ` The user's Stellar public address is ${normalizedAddress}. Use this address when calling check_balance. Do not ask the user for their address.`
+      : ""
+    const messagesWithContext: ChatMessage[] = [
+      {
+        role: "system",
+        content: oneToolRule + addressContext,
+      },
+      ...messages,
+    ]
+
+    const response = await groqChat(apiKey, messagesWithContext)
     const assistantMessage = response.message as ChatMessage
     if (response.tool_calls?.length) {
-      const final = await executeAgentTurn(apiKey, messages, assistantMessage)
-      return NextResponse.json({ content: final })
+      const result = await executeAgentTurn(
+        apiKey,
+        messagesWithContext,
+        assistantMessage,
+        normalizedAddress
+      )
+      return NextResponse.json({ content: result.content, quote: result.quote })
     }
     return NextResponse.json({ content: assistantMessage.content ?? "No response." })
   } catch (error) {
