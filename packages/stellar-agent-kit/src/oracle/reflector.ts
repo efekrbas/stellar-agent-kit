@@ -16,6 +16,9 @@ import type { NetworkConfig } from "../config/networks.js";
 
 import { REFLECTOR_ORACLE } from "../config/oracles.js";
 
+/** Well-known funded mainnet account used only as simulation source (read-only). */
+const SIMULATION_SOURCE_MAINNET = "GDJJRRMBK4IWLEPJGIE6SXD2LP7REGZODU7WDC3I2D6MR37F4XWHBKX2";
+
 /** Either a Soroban token contract ID (C...) or a ticker symbol (e.g. "XLM", "BTC") for off-chain feeds. */
 export type OracleAsset = { contractId: string } | { symbol: string };
 
@@ -116,8 +119,7 @@ export function createReflectorOracle(config: ReflectorOracleConfig) {
   async function decimals(): Promise<number> {
     const contract = new Contract(contractId);
     const op = contract.call("decimals");
-    const source = "GBZOFW7UOPKDWHMFZT4IMUDNAHIM4KMABHTOKEJYFFYCOXLARMMSBLBE";
-    const acc = await server.getAccount(source);
+    const acc = await server.getAccount(SIMULATION_SOURCE_MAINNET);
     const tx = new TransactionBuilder(acc, {
       fee: "10000",
       networkPassphrase,
@@ -138,8 +140,7 @@ export function createReflectorOracle(config: ReflectorOracleConfig) {
     const contract = new Contract(contractId);
     const assetScVal = assetToScVal(asset);
     const op = contract.call("lastprice", assetScVal);
-    const source = "GBZOFW7UOPKDWHMFZT4IMUDNAHIM4KMABHTOKEJYFFYCOXLARMMSBLBE";
-    const acc = await server.getAccount(source);
+    const acc = await server.getAccount(SIMULATION_SOURCE_MAINNET);
     const tx = new TransactionBuilder(acc, {
       fee: "10000",
       networkPassphrase,

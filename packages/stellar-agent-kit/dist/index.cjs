@@ -143,6 +143,7 @@ var REFLECTOR_ORACLE = {
 var BAND_ORACLE = "CCQXWMZVM3KRTXTUPTN53YHL272QGKF32L7XEDNZ2S6OSUFK3NFBGG5M";
 
 // src/oracle/reflector.ts
+var SIMULATION_SOURCE_MAINNET = "GDJJRRMBK4IWLEPJGIE6SXD2LP7REGZODU7WDC3I2D6MR37F4XWHBKX2";
 function assetToScVal(asset) {
   if ("contractId" in asset && asset.contractId) {
     const addr = new import_stellar_sdk3.Address(asset.contractId);
@@ -217,8 +218,7 @@ function createReflectorOracle(config) {
   async function decimals() {
     const contract = new import_stellar_sdk3.Contract(contractId);
     const op = contract.call("decimals");
-    const source = "GBZOFW7UOPKDWHMFZT4IMUDNAHIM4KMABHTOKEJYFFYCOXLARMMSBLBE";
-    const acc = await server.getAccount(source);
+    const acc = await server.getAccount(SIMULATION_SOURCE_MAINNET);
     const tx = new import_stellar_sdk3.TransactionBuilder(acc, {
       fee: "10000",
       networkPassphrase
@@ -235,8 +235,7 @@ function createReflectorOracle(config) {
     const contract = new import_stellar_sdk3.Contract(contractId);
     const assetScVal = assetToScVal(asset);
     const op = contract.call("lastprice", assetScVal);
-    const source = "GBZOFW7UOPKDWHMFZT4IMUDNAHIM4KMABHTOKEJYFFYCOXLARMMSBLBE";
-    const acc = await server.getAccount(source);
+    const acc = await server.getAccount(SIMULATION_SOURCE_MAINNET);
     const tx = new import_stellar_sdk3.TransactionBuilder(acc, {
       fee: "10000",
       networkPassphrase

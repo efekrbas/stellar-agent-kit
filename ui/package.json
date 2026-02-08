@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^14.0.0",
+    "stellar-agent-kit": "*",
     "@emotion/is-prop-valid": "latest",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "1.2.2",
