@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-import 'dotenv/config';
-import { Command } from "commander";
-import { getNetworkConfig } from "./config/networks.js";
-import { StellarClient } from "./core/stellarClient.js";
-import { registerAgentCommand } from "./demo/cliAgent.js";
-const program = new Command();
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
+const commander_1 = require("commander");
+const networks_js_1 = require("./config/networks.js");
+const stellarClient_js_1 = require("./core/stellarClient.js");
+const cliAgent_js_1 = require("./demo/cliAgent.js");
+const program = new commander_1.Command();
 program
     .name("stellar-defi-agent-kit")
     .description("Stellar DeFi agent kit – balance and payments")
@@ -16,8 +18,8 @@ program
     .option("-n, --network <name>", "Network: testnet | mainnet", "testnet")
     .action(async (address, opts) => {
     try {
-        const config = getNetworkConfig(opts.network);
-        const client = new StellarClient(config);
+        const config = (0, networks_js_1.getNetworkConfig)(opts.network);
+        const client = new stellarClient_js_1.StellarClient(config);
         const balances = await client.getBalance(address);
         console.log(JSON.stringify(balances, null, 2));
     }
@@ -41,8 +43,8 @@ program
             console.error("Error: --issuer is required when using --asset");
             process.exit(1);
         }
-        const config = getNetworkConfig(opts.network);
-        const client = new StellarClient(config);
+        const config = (0, networks_js_1.getNetworkConfig)(opts.network);
+        const client = new stellarClient_js_1.StellarClient(config);
         const result = await client.sendPayment(fromSecret, to, amount, opts.asset, opts.issuer);
         console.log("Transaction submitted:", result.hash);
     }
@@ -51,6 +53,6 @@ program
         process.exit(1);
     }
 });
-registerAgentCommand(program);
+(0, cliAgent_js_1.registerAgentCommand)(program);
 program.parse();
 //# sourceMappingURL=index.js.map

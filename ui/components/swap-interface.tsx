@@ -185,8 +185,14 @@ export function SwapInterface() {
       refetchBalances()
     } catch (error) {
       console.error("Swap error:", error)
-      toast.error("Swap failed", {
-        description: error instanceof Error ? error.message : "Unknown error occurred"
+      const msg = error instanceof Error ? error.message : "Unknown error occurred"
+      const isApiKeyError =
+        msg.includes("SOROSWAP_API_KEY") ||
+        msg.includes("required to build")
+      toast.error(isApiKeyError ? "Build requires API key" : "Swap failed", {
+        description: isApiKeyError
+          ? "Set SOROSWAP_API_KEY in the server .env to enable swap execution (quote still works without it)."
+          : msg
       })
     } finally {
       setIsLoading(false)
@@ -325,6 +331,16 @@ export function SwapInterface() {
         {/* Quote Details */}
         {quote && (
           <div className="bg-zinc-950 rounded-xl border border-zinc-800 p-4 mb-6 space-y-3">
+            {(quote as { protocol?: string | string[] }).protocol && (
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-400">Route</span>
+                <span className="text-white capitalize">
+                  {Array.isArray((quote as { protocol?: string | string[] }).protocol)
+                    ? (quote as { protocol: string[] }).protocol.join(" → ")
+                    : (quote as { protocol: string }).protocol}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-zinc-400">Rate</span>
               <span className="text-white">
@@ -358,7 +374,7 @@ export function SwapInterface() {
         {/* Footer */}
         <div className="mt-6 text-center">
           <p className="text-xs text-zinc-500">
-            Powered by SoroSwap
+            Powered by SoroSwap · Routes: SoroSwap, Phoenix, Aqua
           </p>
         </div>
       </div>

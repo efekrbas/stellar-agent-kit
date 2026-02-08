@@ -1,11 +1,16 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Navbar } from "@/components/navbar"
 import { SwapInterface } from "@/components/swap-interface"
+import { SendInterface } from "@/components/send-interface"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import Script from "next/script"
 
 export default function SwapPage() {
+  const searchParams = useSearchParams()
+  const tabFromUrl = searchParams.get("tab") === "send" ? "send" : "swap"
   const [scrollProgress, setScrollProgress] = useState(0)
 
   useEffect(() => {
@@ -142,16 +147,31 @@ export default function SwapPage() {
           {/* Header */}
           <div className="text-center mb-12 animate-fade-in">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-light mb-6 leading-[1] text-balance">
-              Swap
+              Swap & Send
             </h1>
             <p className="text-lg md:text-xl text-zinc-400 mb-8">
-              Swap XLM ↔ USDC via SoroSwap. Quote first, then execute with your key.
+              Swap XLM ↔ USDC via SoroSwap, Phoenix, Aqua. Send XLM or USDC to any address.
             </p>
           </div>
 
-          {/* Swap Interface */}
+          {/* Swap / Send Tabs */}
           <div className="animate-fade-in-up animation-delay-200">
-            <SwapInterface />
+            <Tabs defaultValue={tabFromUrl} className="w-full" key={tabFromUrl}>
+              <TabsList className="grid w-full grid-cols-2 mb-6 bg-zinc-950 border border-zinc-800 p-1 rounded-xl">
+                <TabsTrigger value="swap" className="rounded-lg data-[state=active]:bg-[#5100fd] data-[state=active]:text-white">
+                  Swap
+                </TabsTrigger>
+                <TabsTrigger value="send" className="rounded-lg data-[state=active]:bg-[#5100fd] data-[state=active]:text-white">
+                  Send
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="swap">
+                <SwapInterface />
+              </TabsContent>
+              <TabsContent value="send">
+                <SendInterface />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

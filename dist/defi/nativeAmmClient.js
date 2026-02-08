@@ -1,10 +1,13 @@
-import { Asset, Horizon } from '@stellar/stellar-sdk';
-export class NativeAmmClient {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.NativeAmmClient = void 0;
+const stellar_sdk_1 = require("@stellar/stellar-sdk");
+class NativeAmmClient {
     server;
     networkConfig;
     constructor(networkConfig) {
         this.networkConfig = networkConfig;
-        this.server = new Horizon.Server(networkConfig.horizonUrl);
+        this.server = new stellar_sdk_1.Horizon.Server(networkConfig.horizonUrl);
     }
     async getQuote(fromAssetStr, toAssetStr, amount) {
         try {
@@ -46,16 +49,17 @@ export class NativeAmmClient {
     }
     parseAsset(assetStr) {
         if (assetStr === 'XLM') {
-            return Asset.native();
+            return stellar_sdk_1.Asset.native();
         }
         const parts = assetStr.split(':');
         if (parts.length !== 2) {
             throw new Error(`Invalid asset format: ${assetStr}. Use 'CODE:ISSUER' or 'XLM'`);
         }
-        return new Asset(parts[0], parts[1]);
+        return new stellar_sdk_1.Asset(parts[0], parts[1]);
     }
     getNetworkName() {
         return this.networkConfig.horizonUrl.includes('testnet') ? 'testnet' : 'mainnet';
     }
 }
+exports.NativeAmmClient = NativeAmmClient;
 //# sourceMappingURL=nativeAmmClient.js.map

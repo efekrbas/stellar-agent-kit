@@ -1,0 +1,35 @@
+{
+  "name": "stellar-devkit-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Stellar DevKit – docs, contract addresses, code snippets",
+  "type": "module",
+  "bin": "./dist/index.js",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codewmilan/stellar-agent-kit.git"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist"
+  ],
+  "types": "./dist/index.d.ts"
+}

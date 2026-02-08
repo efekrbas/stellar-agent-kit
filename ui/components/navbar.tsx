@@ -58,6 +58,12 @@ export function Navbar() {
             Capabilities
           </button>
           <Link
+            href="/devkit"
+            className="px-4 py-2 text-white hover:text-zinc-300 transition-colors"
+          >
+            DevKit
+          </Link>
+          <Link
             href="/swap"
             className="px-4 py-2 text-white hover:text-zinc-300 transition-colors"
           >

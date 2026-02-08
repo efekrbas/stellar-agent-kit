@@ -1,27 +1,31 @@
-import { z } from "zod";
-export const NetworkConfigSchema = z.object({
-    horizonUrl: z.string().url(),
-    sorobanRpcUrl: z.string().url(),
-    friendbotUrl: z.string().url().optional(),
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.networks = exports.mainnet = exports.testnet = exports.NetworkConfigSchema = void 0;
+exports.getNetworkConfig = getNetworkConfig;
+const zod_1 = require("zod");
+exports.NetworkConfigSchema = zod_1.z.object({
+    horizonUrl: zod_1.z.string().url(),
+    sorobanRpcUrl: zod_1.z.string().url(),
+    friendbotUrl: zod_1.z.string().url().optional(),
 });
-export const testnet = {
+exports.testnet = {
     horizonUrl: "https://horizon-testnet.stellar.org",
     sorobanRpcUrl: "https://soroban-testnet.stellar.org",
     friendbotUrl: "https://friendbot.stellar.org",
 };
-export const mainnet = {
+exports.mainnet = {
     horizonUrl: "https://horizon.stellar.org",
     sorobanRpcUrl: "https://soroban-rpc.mainnet.stellar.gateway.fm",
 };
-export const networks = {
-    testnet,
-    mainnet,
+exports.networks = {
+    testnet: exports.testnet,
+    mainnet: exports.mainnet,
 };
-export function getNetworkConfig(name) {
-    const parsed = z.enum(["testnet", "mainnet"]).safeParse(name);
+function getNetworkConfig(name) {
+    const parsed = zod_1.z.enum(["testnet", "mainnet"]).safeParse(name);
     if (!parsed.success) {
         throw new Error(`Invalid network: ${name}. Use "testnet" or "mainnet".`);
     }
-    return networks[parsed.data];
+    return exports.networks[parsed.data];
 }
 //# sourceMappingURL=networks.js.map

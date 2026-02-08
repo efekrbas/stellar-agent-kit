@@ -24,9 +24,12 @@ export async function POST(request: NextRequest) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'SOROSWAP_API_KEY is required to build swap transaction' },
+        {
+          error:
+            "SOROSWAP_API_KEY is required to build swap transaction. Set it in the server .env to enable swap execution (quote works without it).",
+        },
         { status: 500 }
-      )
+      );
     }
 
     const soroSwapClient = new SoroSwapClient(networkConfig, apiKey)

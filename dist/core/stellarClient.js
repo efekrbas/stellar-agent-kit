@@ -1,26 +1,29 @@
-import { Keypair, Operation, TransactionBuilder, Asset, BASE_FEE, Networks, Horizon, StrKey, } from "@stellar/stellar-sdk";
-import { z } from "zod";
-const StellarAddressSchema = z
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.StellarClient = void 0;
+const stellar_sdk_1 = require("@stellar/stellar-sdk");
+const zod_1 = require("zod");
+const StellarAddressSchema = zod_1.z
     .string()
     .min(56)
     .max(56)
     .regex(/^G[A-Z2-7]{55}$/, "Invalid Stellar public key (G...)");
-const SecretKeySchema = z
+const SecretKeySchema = zod_1.z
     .string()
     .min(56)
     .max(56)
     .regex(/^S[A-Z2-7]{55}$/, "Invalid Stellar secret key (S...)");
-const AmountSchema = z.string().regex(/^\d+(\.\d+)?$/, "Amount must be a positive number");
+const AmountSchema = zod_1.z.string().regex(/^\d+(\.\d+)?$/, "Amount must be a positive number");
 /**
  * Stellar client for account queries and payment submission.
  * Uses Horizon for classic operations (balance, payments).
  */
-export class StellarClient {
+class StellarClient {
     server;
     config;
     constructor(config) {
         this.config = config;
-        this.server = new Horizon.Server(config.horizonUrl);
+        this.server = new stellar_sdk_1.Horizon.Server(config.horizonUrl);
     }
     /**
      * Fetch all balances for an account (XLM + trust lines).
@@ -31,9 +34,9 @@ export class StellarClient {
         // #endregion
         const normalized = address.trim();
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/3d1882c5-dc48-494c-98b8-3a0080ef9d74', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'stellarClient.ts:getBalance', message: 'StrKey validation', data: { normalized, normalizedLen: normalized?.length, startsWithG: normalized?.startsWith?.('G'), isValidResult: StrKey.isValidEd25519PublicKey(normalized) }, hypothesisId: 'H2', timestamp: Date.now() }) }).catch(() => { });
+        fetch('http://127.0.0.1:7242/ingest/3d1882c5-dc48-494c-98b8-3a0080ef9d74', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'stellarClient.ts:getBalance', message: 'StrKey validation', data: { normalized, normalizedLen: normalized?.length, startsWithG: normalized?.startsWith?.('G'), isValidResult: stellar_sdk_1.StrKey.isValidEd25519PublicKey(normalized) }, hypothesisId: 'H2', timestamp: Date.now() }) }).catch(() => { });
         // #endregion
-        if (!StrKey.isValidEd25519PublicKey(normalized)) {
+        if (!stellar_sdk_1.StrKey.isValidEd25519PublicKey(normalized)) {
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/3d1882c5-dc48-494c-98b8-3a0080ef9d74', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'stellarClient.ts:getBalance', message: 'StrKey validation failed', data: { normalized, reason: 'StrKey.isValidEd25519PublicKey returned false' }, hypothesisId: 'H2', timestamp: Date.now() }) }).catch(() => { });
             // #endregion
@@ -98,21 +101,21 @@ export class StellarClient {
         if (!amountParsed.success) {
             throw new Error(amountParsed.error.errors.map((e) => e.message).join("; "));
         }
-        const sourceKeypair = Keypair.fromSecret(secretParsed.data);
+        const sourceKeypair = stellar_sdk_1.Keypair.fromSecret(secretParsed.data);
         const sourceAccount = await this.server.loadAccount(sourceKeypair.publicKey());
         const asset = assetCode && assetIssuer
-            ? new Asset(assetCode, assetIssuer)
-            : Asset.native();
-        const op = Operation.payment({
+            ? new stellar_sdk_1.Asset(assetCode, assetIssuer)
+            : stellar_sdk_1.Asset.native();
+        const op = stellar_sdk_1.Operation.payment({
             destination: toParsed.data,
             asset,
             amount: amountParsed.data,
         });
         const networkPassphrase = this.config.horizonUrl.includes("testnet")
-            ? Networks.TESTNET
-            : Networks.PUBLIC;
-        const tx = new TransactionBuilder(sourceAccount, {
-            fee: BASE_FEE,
+            ? stellar_sdk_1.Networks.TESTNET
+            : stellar_sdk_1.Networks.PUBLIC;
+        const tx = new stellar_sdk_1.TransactionBuilder(sourceAccount, {
+            fee: stellar_sdk_1.BASE_FEE,
             networkPassphrase,
         })
             .addOperation(op)
@@ -122,4 +125,5 @@ export class StellarClient {
         return await this.server.submitTransaction(tx);
     }
 }
+exports.StellarClient = StellarClient;
 //# sourceMappingURL=stellarClient.js.map

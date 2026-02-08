@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 import { useAccount } from "@/hooks/use-account"
 import { useIsMounted } from "@/hooks/use-is-mounted"
 import { ConnectButton } from "./connect-button"
@@ -12,6 +12,7 @@ import { toast } from "sonner"
 export function WalletData() {
   const mounted = useIsMounted()
   const { account, disconnect } = useAccount()
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
   const copyAddress = async () => {
     if (account?.publicKey) {
@@ -21,6 +22,7 @@ export function WalletData() {
       } catch (error) {
         toast.error("Failed to copy address")
       }
+      setDropdownOpen(false)
     }
   }
 
@@ -31,6 +33,12 @@ export function WalletData() {
         : `https://stellar.expert/explorer/public/account/${account.publicKey}`
       window.open(explorerUrl, "_blank")
     }
+    setDropdownOpen(false)
+  }
+
+  const handleDisconnect = () => {
+    disconnect()
+    setDropdownOpen(false)
   }
 
   if (!mounted) {
@@ -42,7 +50,7 @@ export function WalletData() {
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
       <DropdownMenuTrigger asChild>
         <Button className="gap-2 px-[18px] py-[10px] rounded-full border border-white/20 bg-white/10 text-white font-medium hover:scale-105 transition-transform duration-500 backdrop-blur-sm">
           <div className="flex items-center gap-2">
@@ -97,7 +105,7 @@ export function WalletData() {
           View in Explorer
         </DropdownMenuItem>
         <DropdownMenuItem 
-          onClick={disconnect} 
+          onClick={handleDisconnect} 
           className="gap-2 text-red-400 focus:bg-red-500/10 cursor-pointer"
         >
           <LogOut className="h-4 w-4" />

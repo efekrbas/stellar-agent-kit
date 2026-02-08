@@ -1,52 +1,36 @@
 {
-  "name": "stellar-defi-agent-kit",
+  "name": "stellar-devkit",
   "version": "1.0.0",
-  "description": "Stellar DeFi agent kit for hackathon - balance checks and payments with CLI",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": "./dist/index.js",
-    "./config/networks": "./dist/config/networks.js",
-    "./core/stellarClient": "./dist/core/stellarClient.js",
-    "./defi/soroSwapClient": "./dist/defi/soroSwapClient.js"
-  },
-  "bin": {
-    "stellar-defi-agent-kit": "dist/index.js"
-  },
-  "scripts": {
-    "build": "tsc",
-    "balance": "node dist/index.js balance",
-    "pay": "node dist/index.js pay",
-    "start": "node dist/index.js",
-    "agent": "node dist/index.js agent",
-    "check": "node -e \"import('./dist/core/stellarClient.js').then(m => console.log('✅ StellarClient imported')).catch(e => { console.error(e); process.exit(1); })\"",
-    "precheck": "npm run build",
-    "check:tools": "node -e \"import('./dist/tools/agentTools.js').then(t => console.log('Tools ready:', t.tools?.length ?? 0)).catch(e => { console.error(e); process.exit(1); })\"",
-    "precheck:tools": "npm run build"
-  },
-  "keywords": [
-    "stellar",
-    "soroban",
-    "defi",
-    "blockchain",
-    "cli"
+  "private": true,
+  "description": "Stellar DeFi devkit – Agent Kit SDK, x402 payments, CLI scaffolder, MCP",
+  "workspaces": [
+    "packages/stellar-agent-kit",
+    "packages/x402-stellar-sdk",
+    "packages/create-stellar-devkit-app",
+    "packages/stellar-devkit-mcp",
+    "sdk-fe",
+    "ui"
   ],
-  "author": "",
-  "license": "MIT",
-  "type": "module",
+  "scripts": {
+    "build": "npm run build:root && npm run build --workspaces --if-present",
+    "build:root": "tsc",
+    "build:agent-kit": "npm run build -w packages/stellar-agent-kit",
+    "build:x402": "npm run build -w packages/x402-stellar-sdk",
+    "build:create-app": "npm run build -w packages/create-stellar-devkit-app",
+    "build:mcp": "npm run build -w packages/stellar-devkit-mcp",
+    "typecheck": "tsc --noEmit && npm run typecheck --workspaces --if-present",
+    "dev:sdk-fe": "npm run dev -w sdk-fe --if-present",
+    "dev:ui": "npm run dev -w ui"
+  },
   "engines": {
     "node": ">=18"
   },
+  "author": "",
+  "license": "MIT",
   "dependencies": {
-    "@stellar/freighter-api": "^6.0.1",
-    "@stellar/stellar-sdk": "^14.0.0",
+    "openai": "^4.0.0",
     "commander": "^12.0.0",
-    "dotenv": "^17.2.4",
-    "openai": "^4.104.0",
+    "dotenv": "^16.0.0",
     "zod": "^3.23.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
   }
 }

@@ -1,8 +1,11 @@
-import { z } from "zod";
-import { getNetworkConfig } from "../config/networks.js";
-import { StellarClient } from "../core/stellarClient.js";
-import { SoroSwapClient, TESTNET_ASSETS, } from "../defi/index.js";
-import { Keypair, Asset as StellarAsset, Operation, TransactionBuilder, BASE_FEE, Networks, Horizon, } from "@stellar/stellar-sdk";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.tools = void 0;
+const zod_1 = require("zod");
+const networks_js_1 = require("../config/networks.js");
+const stellarClient_js_1 = require("../core/stellarClient.js");
+const index_js_1 = require("../defi/index.js");
+const stellar_sdk_1 = require("@stellar/stellar-sdk");
 /** Resolve "XLM" | "AUSDC" | "USDC" | contractId (C...) to Asset for testnet/mainnet. */
 function resolveAssetSymbol(symbol, network) {
     const s = symbol.trim().toUpperCase();
@@ -17,9 +20,9 @@ function resolveAssetSymbol(symbol, network) {
     }
     // Testnet assets
     if (s === "XLM")
-        return { contractId: TESTNET_ASSETS.XLM };
+        return { contractId: index_js_1.TESTNET_ASSETS.XLM };
     if (s === "AUSDC" || s === "USDC")
-        return { contractId: TESTNET_ASSETS.USDC };
+        return { contractId: index_js_1.TESTNET_ASSETS.USDC };
     if (s.startsWith("C") && symbol.length === 56)
         return { contractId: symbol.trim() };
     throw new Error(`Unknown testnet asset "${symbol}". Use XLM, AUSDC, or a Soroban contract ID (C...).`);
@@ -38,13 +41,13 @@ function toRawAmount(amount, assetSymbol) {
     const raw = Math.floor(num * 10 ** decimals);
     return String(raw);
 }
-export const tools = [
+exports.tools = [
     {
         name: "check_balance",
         description: "Get token balances for a Stellar address",
-        parameters: z.object({
-            address: z.string().describe("Stellar address"),
-            network: z.enum(["testnet", "mainnet"]).optional().default("mainnet"),
+        parameters: zod_1.z.object({
+            address: zod_1.z.string().describe("Stellar address"),
+            network: zod_1.z.enum(["testnet", "mainnet"]).optional().default("mainnet"),
         }),
         execute: async ({ address, network = "mainnet", }) => {
             const net = network ?? "mainnet";
@@ -52,8 +55,8 @@ export const tools = [
             if (!address || address.length !== 56 || !address.startsWith('G')) {
                 throw new Error(`Invalid Stellar address. Must be 56 characters starting with G.`);
             }
-            const config = getNetworkConfig(net);
-            const client = new StellarClient(config);
+            const config = (0, networks_js_1.getNetworkConfig)(net);
+            const client = new stellarClient_js_1.StellarClient(config);
             const balances = await client.getBalance(address);
             return { balances };
         },
@@ -61,13 +64,13 @@ export const tools = [
     {
         name: "swap_asset",
         description: "Swap tokens via SoroSwap. Use XLM and USDC on mainnet.",
-        parameters: z.object({
-            fromAsset: z.string().describe("Asset to swap from (XLM or USDC)"),
-            toAsset: z.string().describe("Asset to swap to (XLM or USDC)"),
-            amount: z.string().describe("Amount to swap (number only)"),
-            address: z.string().describe("Stellar address"),
-            network: z.enum(["testnet", "mainnet"]).default("mainnet"),
-            privateKey: z.string().optional().describe("56-character secret key starting with S"),
+        parameters: zod_1.z.object({
+            fromAsset: zod_1.z.string().describe("Asset to swap from (XLM or USDC)"),
+            toAsset: zod_1.z.string().describe("Asset to swap to (XLM or USDC)"),
+            amount: zod_1.z.string().describe("Amount to swap (number only)"),
+            address: zod_1.z.string().describe("Stellar address"),
+            network: zod_1.z.enum(["testnet", "mainnet"]).default("mainnet"),
+            privateKey: zod_1.z.string().optional().describe("56-character secret key starting with S"),
         }),
         execute: async ({ fromAsset, toAsset, amount, address, network, privateKey, }) => {
             // Pre-validate address
@@ -78,8 +81,8 @@ export const tools = [
             if (privateKey && (privateKey.length !== 56 || !privateKey.startsWith('S'))) {
                 throw new Error(`Invalid private key. Must be exactly 56 characters starting with S. Got ${privateKey?.length || 0} characters. Please provide the complete private key.`);
             }
-            const config = getNetworkConfig(network);
-            const soroSwapClient = new SoroSwapClient(config);
+            const config = (0, networks_js_1.getNetworkConfig)(network);
+            const soroSwapClient = new index_js_1.SoroSwapClient(config);
             const from = resolveAssetSymbol(fromAsset.trim(), network);
             const to = resolveAssetSymbol(toAsset.trim(), network);
             const rawAmount = toRawAmount(amount, fromAsset.trim());
@@ -138,11 +141,11 @@ export const tools = [
     {
         name: "create_trustline",
         description: "Create a trustline to receive tokens like USDC",
-        parameters: z.object({
-            address: z.string().describe("Stellar address"),
-            assetCode: z.string().describe("Asset code (e.g. USDC)"),
-            network: z.enum(["testnet", "mainnet"]).default("mainnet"),
-            privateKey: z.string().describe("56-character secret key starting with S"),
+        parameters: zod_1.z.object({
+            address: zod_1.z.string().describe("Stellar address"),
+            assetCode: zod_1.z.string().describe("Asset code (e.g. USDC)"),
+            network: zod_1.z.enum(["testnet", "mainnet"]).default("mainnet"),
+            privateKey: zod_1.z.string().describe("56-character secret key starting with S"),
         }),
         execute: async ({ address, assetCode, network, privateKey, }) => {
             // Pre-validate address
@@ -153,21 +156,21 @@ export const tools = [
             if (!privateKey || privateKey.length !== 56 || !privateKey.startsWith('S')) {
                 throw new Error(`Invalid private key. Must be exactly 56 characters starting with S.`);
             }
-            const config = getNetworkConfig(network);
-            const server = new Horizon.Server(config.horizonUrl);
+            const config = (0, networks_js_1.getNetworkConfig)(network);
+            const server = new stellar_sdk_1.Horizon.Server(config.horizonUrl);
             // Define asset issuers
             const MAINNET_USDC_ISSUER = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
             const TESTNET_USDC_ISSUER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"; // Common testnet USDC issuer
             let asset;
             if (assetCode.toUpperCase() === "USDC") {
                 const issuer = network === "mainnet" ? MAINNET_USDC_ISSUER : TESTNET_USDC_ISSUER;
-                asset = new StellarAsset(assetCode.toUpperCase(), issuer);
+                asset = new stellar_sdk_1.Asset(assetCode.toUpperCase(), issuer);
             }
             else {
                 throw new Error(`Unsupported asset: ${assetCode}. Currently only USDC is supported.`);
             }
             try {
-                const keypair = Keypair.fromSecret(privateKey);
+                const keypair = stellar_sdk_1.Keypair.fromSecret(privateKey);
                 const account = await server.loadAccount(address);
                 // Check if trustline already exists
                 const existingTrustline = account.balances.find((balance) => balance.asset_code === assetCode.toUpperCase() &&
@@ -180,12 +183,12 @@ export const tools = [
                     };
                 }
                 // Create trustline transaction
-                const networkPassphrase = network === "mainnet" ? Networks.PUBLIC : Networks.TESTNET;
-                const transaction = new TransactionBuilder(account, {
-                    fee: BASE_FEE,
+                const networkPassphrase = network === "mainnet" ? stellar_sdk_1.Networks.PUBLIC : stellar_sdk_1.Networks.TESTNET;
+                const transaction = new stellar_sdk_1.TransactionBuilder(account, {
+                    fee: stellar_sdk_1.BASE_FEE,
                     networkPassphrase,
                 })
-                    .addOperation(Operation.changeTrust({
+                    .addOperation(stellar_sdk_1.Operation.changeTrust({
                     asset: asset,
                 }))
                     .setTimeout(30)
@@ -208,15 +211,15 @@ export const tools = [
     {
         name: "get_swap_quote",
         description: "Get a quote for token swap without executing it",
-        parameters: z.object({
-            fromAsset: z.string().describe("Asset to swap from (XLM or USDC)"),
-            toAsset: z.string().describe("Asset to swap to (XLM or USDC)"),
-            amount: z.string().describe("Amount to swap (number only)"),
-            network: z.enum(["testnet", "mainnet"]).default("mainnet"),
+        parameters: zod_1.z.object({
+            fromAsset: zod_1.z.string().describe("Asset to swap from (XLM or USDC)"),
+            toAsset: zod_1.z.string().describe("Asset to swap to (XLM or USDC)"),
+            amount: zod_1.z.string().describe("Amount to swap (number only)"),
+            network: zod_1.z.enum(["testnet", "mainnet"]).default("mainnet"),
         }),
         execute: async ({ fromAsset, toAsset, amount, network, }) => {
-            const config = getNetworkConfig(network);
-            const soroSwapClient = new SoroSwapClient(config, process.env.SOROSWAP_API_KEY);
+            const config = (0, networks_js_1.getNetworkConfig)(network);
+            const soroSwapClient = new index_js_1.SoroSwapClient(config, process.env.SOROSWAP_API_KEY);
             const from = resolveAssetSymbol(fromAsset.trim(), network);
             const to = resolveAssetSymbol(toAsset.trim(), network);
             const rawAmount = toRawAmount(amount, fromAsset.trim());

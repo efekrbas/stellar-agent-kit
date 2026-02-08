@@ -43,6 +43,8 @@ export interface QuoteResponse {
   expectedOut: string;
   minOut: string;
   route: string[];
+  /** Protocol(s) used for the quote when from API: e.g. "soroswap", "phoenix", "aqua" */
+  protocol?: string | string[];
   rawData?: unknown;
 }
 
@@ -51,6 +53,7 @@ export const QuoteResponseSchema = z.object({
   expectedOut: z.string(),
   minOut: z.string(),
   route: z.array(z.string()),
+  protocol: z.union([z.string(), z.array(z.string())]).optional(),
   rawData: z.unknown().optional(),
 });
 
@@ -426,11 +429,13 @@ function parseApiQuoteToQuoteResponse(data: unknown): QuoteResponse {
     : Array.isArray(o?.path)
       ? (o.path as string[])
       : [];
+  const protocol = o?.protocol ?? o?.dex ?? o?.protocols;
   return QuoteResponseSchema.parse({
     expectedIn,
     expectedOut,
     minOut,
     route,
+    protocol: Array.isArray(protocol) ? protocol : typeof protocol === "string" ? protocol : undefined,
     rawData: data,
   });
 }

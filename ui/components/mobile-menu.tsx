@@ -46,6 +46,13 @@ export function MobileMenu() {
             Capabilities
           </button>
           <Link
+            href="/devkit"
+            onClick={() => setOpen(false)}
+            className="text-left text-lg text-white hover:text-zinc-300 transition-colors"
+          >
+            DevKit
+          </Link>
+          <Link
             href="/swap"
             onClick={() => setOpen(false)}
             className="text-left text-lg text-white hover:text-zinc-300 transition-colors"

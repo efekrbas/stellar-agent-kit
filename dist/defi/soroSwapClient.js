@@ -1,3 +1,4 @@
+"use strict";
 /**
  * SoroSwap DeFi integration – quote and execute swaps via aggregator.
  *
@@ -16,19 +17,21 @@
  *
  * 3) Uses rpc.Server (Soroban RPC) from @stellar/stellar-sdk for simulation and sendTransaction.
  */
-import { z } from "zod";
-import { Contract, Address, Keypair, TransactionBuilder, Networks, nativeToScVal, xdr, StrKey, } from "@stellar/stellar-sdk";
-import { rpc } from "@stellar/stellar-sdk";
-import { getNetworkConfig } from "../config/networks.js";
-import { NativeAmmClient } from "./nativeAmmClient.js";
-const ContractIdSchema = z.object({
-    contractId: z.string().regex(/^C[A-Z2-7]{55}$/, "Invalid Soroban contract ID (C...)"),
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SoroSwapClient = exports.TESTNET_ASSETS = exports.QuoteResponseSchema = exports.AssetSchema = void 0;
+const zod_1 = require("zod");
+const stellar_sdk_1 = require("@stellar/stellar-sdk");
+const stellar_sdk_2 = require("@stellar/stellar-sdk");
+const networks_js_1 = require("../config/networks.js");
+const nativeAmmClient_js_1 = require("./nativeAmmClient.js");
+const ContractIdSchema = zod_1.z.object({
+    contractId: zod_1.z.string().regex(/^C[A-Z2-7]{55}$/, "Invalid Soroban contract ID (C...)"),
 });
-const ClassicAssetSchema = z.object({
-    code: z.string().min(1),
-    issuer: z.string().min(56),
+const ClassicAssetSchema = zod_1.z.object({
+    code: zod_1.z.string().min(1),
+    issuer: zod_1.z.string().min(56),
 });
-export const AssetSchema = z.union([ContractIdSchema, ClassicAssetSchema]);
+exports.AssetSchema = zod_1.z.union([ContractIdSchema, ClassicAssetSchema]);
 /** Convert Asset to API string: contract ID or "CODE:ISSUER". */
 function assetToApiString(asset) {
     if ("contractId" in asset && asset.contractId)
@@ -38,12 +41,12 @@ function assetToApiString(asset) {
 function hasContractId(asset) {
     return "contractId" in asset && !!asset.contractId;
 }
-export const QuoteResponseSchema = z.object({
-    expectedIn: z.string(),
-    expectedOut: z.string(),
-    minOut: z.string(),
-    route: z.array(z.string()),
-    rawData: z.unknown().optional(),
+exports.QuoteResponseSchema = zod_1.z.object({
+    expectedIn: zod_1.z.string(),
+    expectedOut: zod_1.z.string(),
+    minOut: zod_1.z.string(),
+    route: zod_1.z.array(zod_1.z.string()),
+    rawData: zod_1.z.unknown().optional(),
 });
 // ---------------------------------------------------------------------------
 // SoroSwap contract IDs (research)
@@ -53,7 +56,7 @@ const SOROSWAP_AGGREGATOR_MAINNET = "CAG5LRYQ5JVEUI5TEID72EYOVX44TTUJT5BQR2J6J77
 /** Valid G address for simulation source (previous "system" account had invalid checksum). */
 const SIMULATION_SOURCE_FALLBACK = "GBZOFW7UOPKDWHMFZT4IMUDNAHIM4KMABHTOKEJYFFYCOXLARMMSBLBE";
 /** Testnet: XLM (wrapped contract ID); AUSDC = classic testnet USDC with liquidity on SoroSwap. */
-export const TESTNET_ASSETS = {
+exports.TESTNET_ASSETS = {
     XLM: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
     /** Classic testnet USDC (has liquidity). Use for testnet swaps. */
     AUSDC: {
@@ -70,18 +73,18 @@ const SOROSWAP_API_BASE = "https://api.soroswap.finance";
 // ---------------------------------------------------------------------------
 // SoroSwapClient
 // ---------------------------------------------------------------------------
-export class SoroSwapClient {
+class SoroSwapClient {
     sorobanServer;
     networkConfig;
     apiKey;
     nativeAmmClient;
     constructor(networkConfig, apiKey) {
         this.networkConfig = networkConfig;
-        this.sorobanServer = new rpc.Server(networkConfig.sorobanRpcUrl, {
+        this.sorobanServer = new stellar_sdk_2.rpc.Server(networkConfig.sorobanRpcUrl, {
             allowHttp: networkConfig.sorobanRpcUrl.startsWith("http:"),
         });
         this.apiKey = apiKey ?? process.env.SOROSWAP_API_KEY;
-        this.nativeAmmClient = new NativeAmmClient(networkConfig);
+        this.nativeAmmClient = new nativeAmmClient_js_1.NativeAmmClient(networkConfig);
     }
     /**
      * Get a swap quote: expected in/out, minOut, route.
@@ -90,8 +93,8 @@ export class SoroSwapClient {
      * @param sourceAddress - Optional valid G address for contract simulation source; if invalid, a fallback is used.
      */
     async getQuote(fromAsset, toAsset, amount, sourceAddress) {
-        const fromParsed = AssetSchema.safeParse(fromAsset);
-        const toParsed = AssetSchema.safeParse(toAsset);
+        const fromParsed = exports.AssetSchema.safeParse(fromAsset);
+        const toParsed = exports.AssetSchema.safeParse(toAsset);
         if (!fromParsed.success) {
             throw new Error(`Invalid fromAsset: ${fromParsed.error.message}`);
         }
@@ -180,33 +183,33 @@ export class SoroSwapClient {
         if (!fromAsset.contractId || !toAsset.contractId) {
             throw new Error("Contract path requires contract IDs. Classic assets (AUSDC) need SOROSWAP_API_KEY.");
         }
-        if (!StrKey.isValidContract(fromAsset.contractId)) {
+        if (!stellar_sdk_1.StrKey.isValidContract(fromAsset.contractId)) {
             throw new Error(`Invalid token contract ID (from): checksum or format error. Got: ${fromAsset.contractId.slice(0, 12)}...`);
         }
-        if (!StrKey.isValidContract(toAsset.contractId)) {
+        if (!stellar_sdk_1.StrKey.isValidContract(toAsset.contractId)) {
             throw new Error(`Invalid token contract ID (to): checksum or format error. Got: ${toAsset.contractId.slice(0, 12)}...`);
         }
         const contractId = this.networkConfig.horizonUrl.includes("testnet")
             ? SOROSWAP_AGGREGATOR_TESTNET
             : SOROSWAP_AGGREGATOR_MAINNET;
-        const contract = new Contract(contractId);
-        const fromAddr = new Address(fromAsset.contractId);
-        const toAddr = new Address(toAsset.contractId);
-        const amountScVal = nativeToScVal(amount, { type: "i128" });
+        const contract = new stellar_sdk_1.Contract(contractId);
+        const fromAddr = new stellar_sdk_1.Address(fromAsset.contractId);
+        const toAddr = new stellar_sdk_1.Address(toAsset.contractId);
+        const amountScVal = (0, stellar_sdk_1.nativeToScVal)(amount, { type: "i128" });
         // Common DEX pattern: get_amounts_out(amount_in, path[]). Path = [from, to].
         // SoroSwap router may use different name; adjust when docs are available.
-        const pathScVal = xdr.ScVal.scvVec([
-            nativeToScVal(fromAddr),
-            nativeToScVal(toAddr),
+        const pathScVal = stellar_sdk_1.xdr.ScVal.scvVec([
+            (0, stellar_sdk_1.nativeToScVal)(fromAddr),
+            (0, stellar_sdk_1.nativeToScVal)(toAddr),
         ]);
         const op = contract.call("get_amounts_out", amountScVal, pathScVal);
         const networkPassphrase = this.networkConfig.horizonUrl.includes("testnet")
-            ? Networks.TESTNET
-            : Networks.PUBLIC;
+            ? stellar_sdk_1.Networks.TESTNET
+            : stellar_sdk_1.Networks.PUBLIC;
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/3d1882c5-dc48-494c-98b8-3a0080ef9d74', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'soroSwapClient.ts:getQuoteViaContract', message: 'sourceAddress validation', data: { sourceAddress, sourceAddressTrimmed: sourceAddress?.trim?.(), isValidResult: sourceAddress?.trim?.() && StrKey.isValidEd25519PublicKey(sourceAddress.trim()) }, hypothesisId: 'H4', timestamp: Date.now() }) }).catch(() => { });
+        fetch('http://127.0.0.1:7242/ingest/3d1882c5-dc48-494c-98b8-3a0080ef9d74', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'soroSwapClient.ts:getQuoteViaContract', message: 'sourceAddress validation', data: { sourceAddress, sourceAddressTrimmed: sourceAddress?.trim?.(), isValidResult: sourceAddress?.trim?.() && stellar_sdk_1.StrKey.isValidEd25519PublicKey(sourceAddress.trim()) }, hypothesisId: 'H4', timestamp: Date.now() }) }).catch(() => { });
         // #endregion
-        const simSource = sourceAddress?.trim() && StrKey.isValidEd25519PublicKey(sourceAddress.trim())
+        const simSource = sourceAddress?.trim() && stellar_sdk_1.StrKey.isValidEd25519PublicKey(sourceAddress.trim())
             ? sourceAddress.trim()
             : SIMULATION_SOURCE_FALLBACK;
         let sourceAccount;
@@ -217,7 +220,7 @@ export class SoroSwapClient {
             const m = getAccErr instanceof Error ? getAccErr.message : String(getAccErr);
             throw new Error(`Quote simulation needs a funded account. ${m}. Set SOROSWAP_API_KEY for API-based quotes.`);
         }
-        const tx = new TransactionBuilder(sourceAccount, {
+        const tx = new stellar_sdk_1.TransactionBuilder(sourceAccount, {
             fee: "10000",
             networkPassphrase,
         })
@@ -250,7 +253,7 @@ export class SoroSwapClient {
         if (!retvalB64) {
             throw new Error("SoroSwap quote: no retval in simulation. Use SOROSWAP_API_KEY for API quotes.");
         }
-        const retval = xdr.ScVal.fromXDR(retvalB64, "base64");
+        const retval = stellar_sdk_1.xdr.ScVal.fromXDR(retvalB64, "base64");
         const vec = retval.vec();
         if (!vec || vec.length < 2) {
             throw new Error("SoroSwap quote: unexpected contract return format. Use SOROSWAP_API_KEY for API quotes.");
@@ -260,7 +263,7 @@ export class SoroSwapClient {
         const expectedIn = scValToI128String(amountInVal);
         const expectedOut = scValToI128String(amountOutVal);
         const route = [fromAsset.contractId, toAsset.contractId];
-        return QuoteResponseSchema.parse({
+        return exports.QuoteResponseSchema.parse({
             expectedIn,
             expectedOut,
             minOut: expectedOut,
@@ -275,11 +278,11 @@ export class SoroSwapClient {
         if (secret.length === 56 && secret.startsWith("G")) {
             throw new Error("Expected a secret key (S...) to execute the swap, but received a public address (G...). For a quote only, do not provide a secret key.");
         }
-        const config = getNetworkConfig(network);
-        const server = new rpc.Server(config.sorobanRpcUrl, {
+        const config = (0, networks_js_1.getNetworkConfig)(network);
+        const server = new stellar_sdk_2.rpc.Server(config.sorobanRpcUrl, {
             allowHttp: config.sorobanRpcUrl.startsWith("http:"),
         });
-        const keypair = Keypair.fromSecret(secret);
+        const keypair = stellar_sdk_1.Keypair.fromSecret(secret);
         const fromAddress = keypair.publicKey();
         if (!this.apiKey) {
             throw new Error("executeSwap requires SoroSwap API to build the transaction. Set SOROSWAP_API_KEY.");
@@ -311,9 +314,9 @@ export class SoroSwapClient {
             throw new Error("SoroSwap build response missing xdr");
         }
         const networkPassphrase = config.horizonUrl.includes("testnet")
-            ? Networks.TESTNET
-            : Networks.PUBLIC;
-        const tx = TransactionBuilder.fromXDR(xdrBase64, networkPassphrase);
+            ? stellar_sdk_1.Networks.TESTNET
+            : stellar_sdk_1.Networks.PUBLIC;
+        const tx = stellar_sdk_1.TransactionBuilder.fromXDR(xdrBase64, networkPassphrase);
         tx.sign(keypair);
         const sendResult = await server.sendTransaction(tx);
         if (sendResult.errorResult) {
@@ -325,6 +328,7 @@ export class SoroSwapClient {
         };
     }
 }
+exports.SoroSwapClient = SoroSwapClient;
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -338,7 +342,7 @@ function parseApiQuoteToQuoteResponse(data) {
         : Array.isArray(o?.path)
             ? o.path
             : [];
-    return QuoteResponseSchema.parse({
+    return exports.QuoteResponseSchema.parse({
         expectedIn,
         expectedOut,
         minOut,

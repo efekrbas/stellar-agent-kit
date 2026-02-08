@@ -1,5 +1,8 @@
-import { createInterface } from "readline";
-import { tools } from "../tools/agentTools.js";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.registerAgentCommand = registerAgentCommand;
+const readline_1 = require("readline");
+const agentTools_js_1 = require("../tools/agentTools.js");
 /** OpenAI-compatible tool definitions (JSON Schema for parameters). */
 function toOpenAITools() {
     return [
@@ -75,7 +78,7 @@ function toOpenAITools() {
 }
 /** Read one line from stdin with prompt. */
 function readLine(prompt) {
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const rl = (0, readline_1.createInterface)({ input: process.stdin, output: process.stdout });
     return new Promise((resolve) => {
         rl.question(prompt, (answer) => {
             rl.close();
@@ -91,7 +94,7 @@ async function runOneTool(name, args) {
         safeArgs.privateKey = safeArgs.privateKey.toString().slice(0, 8) + "...";
     }
     console.log(`[DEBUG] Tool called: ${name} with args:`, JSON.stringify(safeArgs, null, 2));
-    const tool = tools.find((t) => t.name === name);
+    const tool = agentTools_js_1.tools.find((t) => t.name === name);
     if (!tool)
         return JSON.stringify({ error: `Unknown tool: ${name}` });
     try {
@@ -142,7 +145,7 @@ async function executeAgentTools(openai, model, messages, assistantMessage) {
     return executeAgentTools(openai, model, current, msg);
 }
 /** Register the `agent` command on the Commander program. */
-export function registerAgentCommand(program) {
+function registerAgentCommand(program) {
     program
         .command("agent")
         .description("Chat with Stellar DeFi agent (balance, swap quotes)")

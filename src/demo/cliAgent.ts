@@ -1,7 +1,20 @@
 import { createInterface } from "readline";
 import type { Command } from "commander";
-import type OpenAI from "openai";
 import { tools } from "../tools/agentTools.js";
+
+/** Minimal type for OpenAI-compatible client (avoids duplicate module resolution with dynamic import). */
+type OpenAIClient = {
+  chat: {
+    completions: {
+      create: (params: {
+        model: string;
+        messages: ChatMessage[];
+        tools: ChatCompletionTool[];
+        tool_choice?: "auto" | "none" | { type: "function"; function: { name: string } };
+      }) => Promise<{ choices: Array<{ message?: AssistantMessage }> }>;
+    };
+  };
+};
 
 /** Local types for OpenAI API. */
 type ChatCompletionTool = {
@@ -125,7 +138,7 @@ async function runOneTool(name: string, args: Record<string, unknown>): Promise<
  * call OpenAI again with assistant message + tool results until we get a final text response.
  */
 async function executeAgentTools(
-  openai: OpenAI,
+  openai: OpenAIClient,
   model: string,
   messages: ChatMessage[],
   assistantMessage: AssistantMessage
@@ -214,7 +227,7 @@ export function registerAgentCommand(program: Command): void {
 
           const assistantMessage = choice.message;
 
-          const final = await executeAgentTools(openai, model, history, assistantMessage);
+          const final = await executeAgentTools(openai as OpenAIClient, model, history, assistantMessage);
           console.log("Agent:", final);
 
           history.push({ role: "assistant", content: final });
