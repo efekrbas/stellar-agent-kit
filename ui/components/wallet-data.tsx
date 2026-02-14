@@ -51,9 +51,12 @@ export function WalletData() {
       <DropdownMenuTrigger asChild>
         <Button className="gap-2 px-[18px] py-[10px] rounded-full border border-white/20 bg-white/10 text-white font-medium hover:scale-105 transition-transform duration-500 backdrop-blur-sm">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full" />
-            <span className="font-mono text-sm">{account.displayName}</span>
-            <ChevronDown className="h-4 w-4" />
+            <div className="w-2 h-2 bg-green-500 rounded-full shrink-0" aria-hidden />
+            <span className="text-sm">Connected</span>
+            {account.displayName.length > 6 && (
+              <span className="font-mono text-xs text-white/80 hidden sm:inline">{account.displayName}</span>
+            )}
+            <ChevronDown className="h-4 w-4 shrink-0" />
           </div>
         </Button>
       </DropdownMenuTrigger>

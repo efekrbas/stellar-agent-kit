@@ -342,7 +342,8 @@ export class SoroSwapClient {
     }
     const networkName = config.horizonUrl.includes("testnet") ? "testnet" : "mainnet";
     const buildUrl = `${SOROSWAP_API_BASE}/quote/build?network=${networkName}`;
-    const quoteForBuild = quote.rawData || quote;
+    const raw = quote.rawData || quote;
+    const quoteForBuild = normalizeQuoteForBuild(raw as Record<string, unknown>);
     const buildBody = {
       quote: quoteForBuild,
       from: fromAddress,
@@ -358,7 +359,21 @@ export class SoroSwapClient {
     });
     if (!buildRes.ok) {
       const text = await buildRes.text();
-      throw new Error(`SoroSwap build failed ${buildRes.status}: ${text}`);
+      let message = text;
+      try {
+        const body = JSON.parse(text) as { message?: string; error?: string; errorCode?: number };
+        if (body.message === "TokenError.InsufficientBalance" || body.error === "Simulation Failed") {
+          message =
+            "Insufficient balance: your wallet doesn't have enough of the source token for this swap. Try a smaller amount or check your balance.";
+        } else if (body.message) {
+          message = body.message;
+        }
+      } catch {
+        // keep original text
+      }
+      const err = new Error(`SoroSwap build failed ${buildRes.status}: ${message}`);
+      (err as Error & { statusCode?: number }).statusCode = buildRes.status;
+      throw err;
     }
     const buildData = (await buildRes.json()) as { xdr?: string };
     const xdrBase64 = buildData?.xdr;
@@ -417,6 +432,28 @@ export class SoroSwapClient {
     tx.sign(keypair);
     return this.submitSignedTransaction(tx.toXDR(), network);
   }
+}
+
+/**
+ * Normalize quote from API so the build endpoint accepts it.
+ * - poolHashes: build rejects a single string; remove it so build uses routePlan instead.
+ * - amountOut / otherAmountThreshold: build expects strings; quote can return numbers → stringify.
+ */
+function normalizeQuoteForBuild(quote: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...quote };
+  if (typeof out.poolHashes === "string") {
+    delete out.poolHashes;
+  }
+  if (typeof out.amountOut === "number") out.amountOut = String(out.amountOut);
+  if (typeof out.otherAmountThreshold === "number") out.otherAmountThreshold = String(out.otherAmountThreshold);
+  if (out.rawTrade && typeof out.rawTrade === "object") {
+    const rt = out.rawTrade as Record<string, unknown>;
+    const rtOut = { ...rt };
+    if (typeof rtOut.amountOutMin === "number") rtOut.amountOutMin = String(rtOut.amountOutMin);
+    if (typeof rtOut.poolHashes === "string") delete rtOut.poolHashes;
+    out.rawTrade = rtOut;
+  }
+  return out;
 }
 
 function parseApiQuoteToQuoteResponse(data: unknown): QuoteResponse {

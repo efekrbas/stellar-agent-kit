@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { LenisProvider } from "@/components/lenis-provider"
 import { WalletProvider } from "@/components/wallet-provider"
+import { AccountProvider } from "@/components/account-provider"
 import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
@@ -25,8 +26,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geist.variable} ${geistMono.variable} font-sans antialiased`}>
         <WalletProvider>
-          <LenisProvider>{children}</LenisProvider>
-          <Toaster />
+          <AccountProvider>
+            <LenisProvider>{children}</LenisProvider>
+            <Toaster />
+          </AccountProvider>
         </WalletProvider>
         <Analytics />
       </body>

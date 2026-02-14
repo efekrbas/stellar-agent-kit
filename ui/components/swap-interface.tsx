@@ -78,8 +78,8 @@ export function SwapInterface() {
       try {
         setIsLoading(true)
         
-        // Convert amount to raw units (multiply by 10^7 for 7 decimals)
-        const rawAmount = (parseFloat(fromAmount) * Math.pow(10, fromAsset.decimals)).toString()
+        // Convert amount to raw units (round to avoid float precision, e.g. 0.00000001 -> "0.1")
+        const rawAmount = Math.round(parseFloat(fromAmount) * Math.pow(10, fromAsset.decimals)).toString()
         
         const fromAssetData = { contractId: fromAsset.contractId }
         const toAssetData = { contractId: toAsset.contractId }

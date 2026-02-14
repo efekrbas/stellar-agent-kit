@@ -27,8 +27,14 @@ export async function GET(request: NextRequest) {
     const data = await oracle.lastprice(asset)
     return NextResponse.json(data)
   } catch (error) {
-    console.error("Price error:", error)
     const message = error instanceof Error ? error.message : "Failed to get price"
+    if (message.includes("Oracle returned no price") || message.includes("no price")) {
+      return NextResponse.json(
+        { price: null, symbol: searchParams.get("symbol") ?? undefined, contractId: searchParams.get("contractId") ?? undefined, message: "No price available for this asset" },
+        { status: 200 }
+      )
+    }
+    console.error("Price error:", error)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

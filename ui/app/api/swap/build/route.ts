@@ -37,9 +37,13 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Build swap error:', error)
     const message = error instanceof Error ? error.message : 'Failed to build swap'
+    const statusCode = error && typeof error === 'object' && 'statusCode' in error
+      ? (error as { statusCode: number }).statusCode
+      : null
+    const isClientError = statusCode === 400 || message.includes('Insufficient balance')
     return NextResponse.json(
       { error: message },
-      { status: 500 }
+      { status: isClientError ? 400 : 500 }
     )
   }
 }
