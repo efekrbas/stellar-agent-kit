@@ -10,6 +10,7 @@ import { PageTransition } from "@/components/page-transition"
 import { ProtocolsIntegratedSection } from "@/components/protocols-integrated"
 import { ScrambleText } from "@/components/scramble-text"
 import { FeatureCard } from "@/components/feature-card"
+import { DotPattern } from "@/components/dot-pattern"
 
 export default function Home() {
   const scrollToCapabilities = () => {
@@ -21,10 +22,20 @@ export default function Home() {
       <Navbar />
       <PageTransition>
 
-      {/* Hero — centered, large (majority of viewport) */}
-      <div id="hero" className="relative z-20 container mx-auto px-6 lg:px-12 pt-32 pb-40 min-h-[85vh] flex flex-col items-center justify-center text-center">
-        <div className="flex flex-col items-center max-w-3xl mx-auto w-full">
-          <div className="mb-10 md:mb-14 animate-fade-in">
+      {/* Hero — centered, large (majority of viewport) with dot pattern background */}
+      <div className="relative min-h-[85vh] w-full">
+        <DotPattern
+          fixed={false}
+          baseColor="#3f3f46"
+          glowColor="#a78bfa"
+          gap={20}
+          dotSize={1.5}
+          proximity={140}
+          waveSpeed={0.4}
+        />
+        <div id="hero" className="relative z-20 container mx-auto px-6 lg:px-12 pt-32 pb-40 min-h-[85vh] flex flex-col items-center justify-center text-center">
+          <div className="flex flex-col items-center max-w-3xl mx-auto w-full">
+            <div className="mb-10 md:mb-14 animate-fade-in">
             <Image
               src="/stellar-logo.png"
               alt="Stellar"
@@ -71,6 +82,7 @@ export default function Home() {
               npm
             </Link>
           </div>
+        </div>
         </div>
       </div>
 
@@ -120,9 +132,20 @@ export default function Home() {
           {/* Protocols Integrated — 5 protocols from the kit */}
           <ProtocolsIntegratedSection />
 
-          {/* Try it yourself — code snippet + CTA */}
-          <section id="try-it" className="relative z-20 py-16 scroll-mt-24">
-            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+          {/* Try it yourself — code snippet + CTA (dot pattern background) */}
+          <section id="try-it" className="relative z-20 py-16 scroll-mt-24 overflow-hidden">
+            <div className="absolute inset-0 -z-10">
+              <DotPattern
+                fixed={false}
+                baseColor="#27272a"
+                glowColor="#a78bfa"
+                gap={22}
+                dotSize={1.5}
+                proximity={100}
+                waveSpeed={0.3}
+              />
+            </div>
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center relative z-10">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950 overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-900/80">
                   <span className="w-3 h-3 rounded-full bg-zinc-600" />
