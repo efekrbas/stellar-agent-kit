@@ -122,10 +122,12 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       throw new Error("No wallet connected")
     }
 
+    const networkPassphrase = options?.networkPassphrase || "Public Global Stellar Network ; September 2015"
+
     try {
       const result = await signTransaction(xdr, {
-        networkPassphrase: options?.networkPassphrase || "Public Global Stellar Network ; September 2015",
-        accountToSign: account.publicKey,
+        networkPassphrase,
+        address: account.publicKey,
       })
 
       if (result.error) {

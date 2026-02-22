@@ -16,7 +16,7 @@ export function LendingInterface() {
   const [loading, setLoading] = useState(false);
 
   const handleLending = async () => {
-    if (!account?.address) {
+    if (!account?.publicKey) {
       toast.error("Please connect your wallet first");
       return;
     }
@@ -39,7 +39,8 @@ export function LendingInterface() {
         body: JSON.stringify({
           asset,
           amount,
-          publicKey: account.address,
+          publicKey: account.publicKey,
+          network: (account.network?.toLowerCase?.() ?? "").includes("public") ? "mainnet" : "testnet",
         }),
       });
 
@@ -70,6 +71,7 @@ export function LendingInterface() {
         },
         body: JSON.stringify({
           signedXdr: signResult.signedTxXdr,
+          network: (account.network?.toLowerCase?.() ?? "").includes("public") ? "mainnet" : "testnet",
         }),
       });
 
@@ -106,7 +108,7 @@ export function LendingInterface() {
         <h3 className="text-xl font-medium text-white">Blend Lending</h3>
       </div>
 
-      {!account?.address ? (
+      {!account?.publicKey ? (
         <div className="text-center py-8">
           <p className="mb-4 text-zinc-400">Connect your wallet to supply or borrow assets</p>
           <ConnectButton />

@@ -1,32 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AllbridgeCoreSdk, nodeRpcUrlsDefault } from "@allbridge/bridge-core-sdk";
+import { AllbridgeCoreSdk, nodeRpcUrlsDefault, ChainSymbol } from "@allbridge/bridge-core-sdk";
+
+/** Map ChainSymbol to UI-friendly id (e.g. SRB -> "stellar") */
+function chainSymbolToId(symbol: string): string {
+  return symbol === ChainSymbol.SRB ? "stellar" : symbol.toLowerCase();
+}
 
 export async function GET(request: NextRequest) {
   try {
-    // Initialize Allbridge SDK
     const sdk = new AllbridgeCoreSdk(nodeRpcUrlsDefault);
+    const chainDetailsMap = await sdk.chainDetailsMap();
 
-    // Get supported chains and tokens
-    const chains = await sdk.chainDetailsMap();
-    const tokens = await sdk.tokens();
-
-    // Format chains for frontend
-    const supportedChains = Object.values(chains).map(chain => ({
-      id: chain.chainSymbol.toLowerCase(),
+    const supportedChains = Object.entries(chainDetailsMap).map(([sym, chain]) => ({
+      id: chainSymbolToId(sym),
       name: chain.name,
-      symbol: chain.chainSymbol,
-      chainId: chain.chainId,
+      symbol: chain.chainSymbol ?? sym,
+      chainId: (chain as { chainId?: number })?.chainId,
     }));
 
-    // Get unique tokens across all chains
-    const allTokens = Object.values(tokens).flat();
+    const allTokens = Object.values(chainDetailsMap).flatMap((chain) => chain.tokens ?? []);
     const uniqueTokens = Array.from(
-      new Map(allTokens.map(token => [token.symbol, token])).values()
-    ).map(token => ({
-      symbol: token.symbol,
-      name: token.name,
-      decimals: token.decimals,
-    }));
+      new Map(allTokens.map((t) => [t.symbol, { symbol: t.symbol, name: t.name, decimals: t.decimals }])).values()
+    );
 
     return NextResponse.json({
       success: true,

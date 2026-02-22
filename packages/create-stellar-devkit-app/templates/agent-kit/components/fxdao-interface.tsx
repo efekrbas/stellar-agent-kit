@@ -27,7 +27,7 @@ export function FxdaoInterface() {
   const [loading, setLoading] = useState(false);
 
   const handleFxdaoAction = async () => {
-    if (!account?.address) {
+    if (!account?.publicKey) {
       toast.error("Please connect your wallet first");
       return;
     }
@@ -61,7 +61,7 @@ export function FxdaoInterface() {
         <h3 className="text-xl font-medium text-white">FxDAO</h3>
       </div>
 
-      {!account?.address ? (
+      {!account?.publicKey ? (
         <div className="text-center py-8">
           <p className="mb-4 text-zinc-400">Connect your wallet to access synthetic stablecoins</p>
           <ConnectButton />

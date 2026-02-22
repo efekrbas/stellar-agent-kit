@@ -81,7 +81,7 @@ export function SwapInterface() {
     try {
       setQuoteLoading(true);
       const network = "mainnet";
-      const { xdr } = await buildSwap(quote as Parameters<typeof buildSwap>[0], account.publicKey, network);
+      const { xdr } = await buildSwap(quote as unknown as Parameters<typeof buildSwap>[0], account.publicKey, network);
       const signResult = await signTransaction(xdr, { networkPassphrase: Networks.PUBLIC });
       if (signResult.error) {
         if (signResult.error.message?.toLowerCase().includes("rejected")) {

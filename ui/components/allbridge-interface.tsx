@@ -85,6 +85,27 @@ export function AllbridgeInterface() {
       return
     }
 
+    const amountNum = parseFloat(amount)
+    if (Number.isNaN(amountNum) || amountNum <= 0) {
+      setError("Please enter a valid positive amount")
+      return
+    }
+
+    if (fromChain.id === "stellar" && toChain.id === "ethereum" && (selectedToken.symbol === "USDC" || selectedToken.symbol === "USDT")) {
+      if (amountNum < 4) {
+        setError("For Stellar → Ethereum the bridge fee is ~3–4 USDC/USDT (deducted from amount). Please enter at least 4.")
+        return
+      }
+    }
+
+    if (toChain.id === "ethereum") {
+      const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/
+      if (!ethAddressRegex.test(toAddress.trim())) {
+        setError("Please enter a valid Ethereum address (0x followed by 40 hex characters)")
+        return
+      }
+    }
+
     setIsLoading(true)
     setError(null)
 
@@ -104,11 +125,22 @@ export function AllbridgeInterface() {
       })
 
       if (!response.ok) {
-        const error = await response.text()
-        throw new Error(error || "Failed to build bridge transaction")
+        const text = await response.text()
+        let message = text
+        try {
+          const json = JSON.parse(text)
+          if (typeof json?.error === "string") message = json.error
+        } catch {
+          // use text as-is
+        }
+        throw new Error(message || "Failed to build bridge transaction")
       }
 
-      const { xdr } = await response.json()
+      const data = await response.json()
+      const xdr = data?.xdr
+      if (typeof xdr !== "string" || !xdr.trim()) {
+        throw new Error("Invalid response from server: no transaction to sign. Please try again.")
+      }
 
       // Sign transaction with Freighter
       const signedXdr = await signTransaction(xdr, {
@@ -123,11 +155,22 @@ export function AllbridgeInterface() {
       })
 
       if (!submitResponse.ok) {
-        const error = await submitResponse.text()
-        throw new Error(error || "Failed to submit transaction")
+        const text = await submitResponse.text()
+        let message = text
+        try {
+          const json = JSON.parse(text)
+          if (typeof json?.error === "string") message = json.error
+        } catch {
+          // use text as-is
+        }
+        throw new Error(message || "Failed to submit transaction")
       }
 
-      const { hash } = await submitResponse.json()
+      const submitData = await submitResponse.json()
+      const hash = submitData?.hash
+      if (typeof hash !== "string" || !hash.trim()) {
+        throw new Error("Submit succeeded but no transaction hash was returned. Check your wallet or explorer.")
+      }
 
       // Add to transaction history
       const newTransaction: BridgeTransaction = {
@@ -281,6 +324,9 @@ export function AllbridgeInterface() {
                 {selectedToken.symbol}
               </div>
             </div>
+            <p className="text-xs text-zinc-500">
+              Stellar → Ethereum bridge fee is ~3–4 USDC (deducted from amount). Use at least 4 USDC.
+            </p>
           </div>
 
           {/* Destination Address */}

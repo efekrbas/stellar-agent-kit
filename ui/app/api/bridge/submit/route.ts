@@ -1,31 +1,40 @@
 import { NextRequest, NextResponse } from "next/server"
+import { AllbridgeCoreSdk, nodeRpcUrlsDefault } from "@allbridge/bridge-core-sdk"
 
 export async function POST(request: NextRequest) {
   try {
-    const { signedXdr } = await request.json()
+    const body = await request.json()
+    const { signedXdr } = body
 
     if (!signedXdr) {
       return NextResponse.json(
-        { error: "Missing signed XDR" },
+        { error: "Missing signed transaction XDR" },
         { status: 400 }
       )
     }
 
-    // Mock transaction submission for bridge
-    // In a real implementation, you would submit to Stellar network and initiate cross-chain transfer
-    const mockHash = `bridge_${Date.now().toString(16)}${Math.random().toString(16).slice(2, 8)}`
+    const sdk = new AllbridgeCoreSdk(nodeRpcUrlsDefault)
+    const result = await sdk.utils.srb.sendTransactionSoroban(String(signedXdr))
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    const hash = result?.hash ?? (result as { hash?: string })?.hash ?? ""
+    if (!hash) {
+      return NextResponse.json(
+        { error: "Submit succeeded but no transaction hash returned" },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
-      hash: mockHash,
-      status: "success"
+      success: true,
+      hash,
+      status: (result as { status?: string })?.status ?? "PENDING",
+      message: "Bridge transaction submitted successfully",
     })
-  } catch (error) {
-    console.error("Bridge submit API error:", error)
+  } catch (error: unknown) {
+    console.error("Bridge submit error:", error)
+    const message = error instanceof Error ? error.message : "Unknown error occurred"
     return NextResponse.json(
-      { error: "Failed to submit bridge transaction" },
+      { error: `Failed to submit bridge transaction: ${message}` },
       { status: 500 }
     )
   }

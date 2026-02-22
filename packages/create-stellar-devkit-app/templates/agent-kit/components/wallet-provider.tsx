@@ -45,7 +45,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           // Check if the app is allowed to connect
           const allowed = await isAllowed()
           console.log("Wallet allowed status:", allowed)
-          setIsWalletAllowed(allowed)
+          const allowedBool = typeof allowed === "object" && allowed !== null && "isAllowed" in allowed
+            ? Boolean((allowed as { isAllowed?: boolean }).isAllowed)
+            : Boolean(allowed)
+          setIsWalletAllowed(allowedBool)
         } catch (error) {
           console.error("Error checking isAllowed:", error)
           setIsWalletAllowed(false)

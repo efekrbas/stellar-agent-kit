@@ -14,16 +14,15 @@ const SUPPORTED_CHAINS = [
   { id: "bsc", name: "BSC", symbol: "BNB" },
   { id: "polygon", name: "Polygon", symbol: "MATIC" },
   { id: "avalanche", name: "Avalanche", symbol: "AVAX" },
-  { id: "fantom", name: "Fantom", symbol: "FTM" },
   { id: "solana", name: "Solana", symbol: "SOL" },
   { id: "tron", name: "Tron", symbol: "TRX" },
+  { id: "arbitrum", name: "Arbitrum", symbol: "ARB" },
+  { id: "base", name: "Base", symbol: "BAS" },
 ];
 
 const SUPPORTED_ASSETS = [
   { symbol: "USDC", name: "USD Coin" },
   { symbol: "USDT", name: "Tether USD" },
-  { symbol: "ETH", name: "Ethereum" },
-  { symbol: "BTC", name: "Bitcoin" },
 ];
 
 export function BridgeInterface() {
@@ -36,17 +35,12 @@ export function BridgeInterface() {
   const [loading, setLoading] = useState(false);
 
   const handleBridge = async () => {
-    if (!account?.address) {
+    if (!account?.publicKey) {
       toast.error("Please connect your wallet first");
       return;
     }
 
-    if (!amount || parseFloat(amount) <= 0) {
-      toast.error("Please enter a valid amount");
-      return;
-    }
-
-    if (!toAddress) {
+    if (!toAddress.trim()) {
       toast.error("Please enter destination address");
       return;
     }
@@ -56,36 +50,70 @@ export function BridgeInterface() {
       return;
     }
 
+    const amountNum = parseFloat(amount);
+    if (Number.isNaN(amountNum) || amountNum <= 0) {
+      toast.error("Please enter a valid positive amount");
+      return;
+    }
+
+    if (fromChain === "stellar" && toChain === "ethereum" && (asset === "USDC" || asset === "USDT")) {
+      if (amountNum < 4) {
+        toast.error("For Stellar → Ethereum the bridge fee is ~3–4 USDC/USDT (deducted from amount). Please enter at least 4.");
+        return;
+      }
+    }
+
+    if (toChain === "ethereum") {
+      if (!/^0x[a-fA-F0-9]{40}$/.test(toAddress.trim())) {
+        toast.error("Please enter a valid Ethereum address (0x followed by 40 hex characters)");
+        return;
+      }
+    }
+
     setLoading(true);
     try {
-      // Step 1: Build the bridge transaction
       const buildResponse = await fetch("/api/bridge/build", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fromChain,
           toChain,
           asset,
           amount,
-          fromAddress: account.address,
-          toAddress,
+          fromAddress: account.publicKey,
+          toAddress: toAddress.trim(),
         }),
       });
 
-      const buildResult = await buildResponse.json();
-
+      const buildText = await buildResponse.text();
       if (!buildResponse.ok) {
-        throw new Error(buildResult.error || "Failed to build bridge transaction");
+        let message = buildText;
+        try {
+          const json = JSON.parse(buildText);
+          if (typeof json?.error === "string") message = json.error;
+        } catch {
+          // use text as-is
+        }
+        throw new Error(message || "Failed to build bridge transaction");
       }
 
-      // Step 2: Sign with Freighter
+      let buildData: { xdr?: string; sourceChain?: string; destChain?: string };
+      try {
+        buildData = JSON.parse(buildText);
+      } catch {
+        throw new Error("Invalid response from server. Please try again.");
+      }
+
+      const xdr = buildData?.xdr;
+      if (typeof xdr !== "string" || !xdr.trim()) {
+        throw new Error("Invalid response from server: no transaction to sign. Please try again.");
+      }
+
       const networkPassphrase = Networks.PUBLIC;
-      const signResult = await signTransaction(buildResult.xdr, { networkPassphrase });
-      
+      const signResult = await signTransaction(xdr, { networkPassphrase });
+
       if (signResult.error) {
-        if (signResult.error.message?.toLowerCase().includes("rejected") || 
+        if (signResult.error.message?.toLowerCase().includes("rejected") ||
             signResult.error.message?.toLowerCase().includes("denied")) {
           toast.info("Bridge transaction cancelled");
           return;
@@ -93,35 +121,51 @@ export function BridgeInterface() {
         throw new Error(signResult.error.message || "Failed to sign transaction");
       }
 
-      // Step 3: Submit the signed transaction
+      const signedXdr = (signResult as { signedTxXdr?: string }).signedTxXdr ?? (signResult as { signedXDR?: string }).signedXDR;
+      if (!signedXdr || typeof signedXdr !== "string") {
+        throw new Error("Wallet did not return a signed transaction");
+      }
+
       const submitResponse = await fetch("/api/bridge/submit", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          signedXdr: signResult.signedTxXdr,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signedXdr }),
       });
 
-      const submitResult = await submitResponse.json();
-
+      const submitText = await submitResponse.text();
       if (!submitResponse.ok) {
-        throw new Error(submitResult.error || "Failed to submit transaction");
+        let message = submitText;
+        try {
+          const json = JSON.parse(submitText);
+          if (typeof json?.error === "string") message = json.error;
+        } catch {
+          // use text as-is
+        }
+        throw new Error(message || "Failed to submit transaction");
+      }
+
+      let submitData: { hash?: string };
+      try {
+        submitData = JSON.parse(submitText);
+      } catch {
+        throw new Error("Invalid response from server. Please try again.");
+      }
+
+      const hash = submitData?.hash;
+      if (typeof hash !== "string" || !hash.trim()) {
+        throw new Error("Submit succeeded but no transaction hash was returned. Check your wallet or explorer.");
       }
 
       toast.success(`Successfully bridged ${amount} ${asset}!`, {
-        description: `From ${buildResult.sourceChain} to ${buildResult.destChain}. Hash: ${submitResult.hash}`,
+        description: `From ${buildData.sourceChain ?? "Stellar"} to ${buildData.destChain ?? toChain}. Hash: ${hash}`,
         action: {
           label: "View on Stellar Expert",
-          onClick: () => window.open(`https://stellar.expert/explorer/public/tx/${submitResult.hash}`, "_blank"),
+          onClick: () => window.open(`https://stellar.expert/explorer/public/tx/${hash}`, "_blank"),
         },
       });
 
-      // Reset form
       setAmount("");
       setToAddress("");
-      
     } catch (error) {
       console.error("Bridge error:", error);
       const message = error instanceof Error ? error.message : "Failed to initiate bridge transaction";
@@ -144,7 +188,7 @@ export function BridgeInterface() {
         <h3 className="text-xl font-medium text-white">Allbridge Core</h3>
       </div>
 
-      {!account?.address ? (
+      {!account?.publicKey ? (
         <div className="text-center py-8">
           <p className="mb-4 text-zinc-400">Connect your wallet to bridge assets cross-chain</p>
           <ConnectButton />
@@ -218,6 +262,9 @@ export function BridgeInterface() {
               placeholder="0.00"
               className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder-zinc-500 focus:border-[#5100fd] focus:outline-none"
             />
+            <p className="mt-1 text-xs text-zinc-500">
+              Stellar → Ethereum bridge fee is ~3–4 USDC (deducted from amount). Use at least 4 USDC.
+            </p>
           </div>
 
           {/* Destination Address */}
@@ -247,7 +294,7 @@ export function BridgeInterface() {
           {/* Info */}
           <div className="rounded-lg border border-zinc-700 bg-zinc-900/50 p-4">
             <p className="text-sm text-zinc-400 mb-2">
-              Cross-chain bridge powered by Allbridge Core. Connect 10+ networks including Ethereum, BSC, Polygon, Solana, and more.
+              Bridge from Stellar to Ethereum, BSC, Polygon, Solana, and more via Allbridge Core. Select Stellar as &quot;From&quot; chain.
             </p>
             <a
               href="https://docs-core.allbridge.io/sdk/guides/stellar"

@@ -13,15 +13,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize Allbridge SDK
     const sdk = new AllbridgeCoreSdk(nodeRpcUrlsDefault);
+    const result = await sdk.utils.srb.sendTransactionSoroban(String(signedXdr));
 
-    // Submit the signed transaction
-    const result = await sdk.bridge.send(signedXdr);
+    const hash = result?.hash ?? (result as { hash?: string })?.hash ?? "";
+    if (!hash) {
+      return NextResponse.json(
+        { error: "Submit succeeded but no transaction hash returned" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      hash: result,
+      hash,
+      status: (result as { status?: string })?.status ?? "PENDING",
       message: "Bridge transaction submitted successfully",
     });
   } catch (error: unknown) {
