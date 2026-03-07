@@ -92,6 +92,7 @@ export function GlassSurface({
   const blueGradId = `blue-grad-${uniqueId}`
 
   const [svgSupported, setSvgSupported] = useState(false)
+  const [hasMounted, setHasMounted] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const feImageRef = useRef<SVGFEImageElement>(null)
   const redChannelRef = useRef<SVGFEDisplacementMapElement>(null)
@@ -178,8 +179,13 @@ export function GlassSurface({
   }, [width, height])
 
   useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hasMounted) return
     setSvgSupported(supportsSVGFilters(filterId))
-  }, [filterId])
+  }, [filterId, hasMounted])
 
   const getContainerStyles = (): React.CSSProperties => {
     const baseStyles: React.CSSProperties = {
@@ -187,13 +193,14 @@ export function GlassSurface({
       width: typeof width === "number" ? `${width}px` : width,
       height: typeof height === "number" ? `${height}px` : height,
       borderRadius: `${borderRadius}px`,
-      // @ts-expect-error CSS custom props
-      "--glass-frost": backgroundOpacity,
-      "--glass-saturation": saturation,
+      // @ts-expect-error CSS custom props — use string so server/client match
+      "--glass-frost": String(backgroundOpacity),
+      "--glass-saturation": String(saturation),
     }
 
-    const backdropFilterSupported = supportsBackdropFilter()
-    const useSvgFilter = svgSupported && !simpleGlass
+    // Use fallback styles until mounted so server and first client render match (avoids hydration mismatch)
+    const backdropFilterSupported = hasMounted && supportsBackdropFilter()
+    const useSvgFilter = hasMounted && svgSupported && !simpleGlass
 
     if (useSvgFilter) {
       return {

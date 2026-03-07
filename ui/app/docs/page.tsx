@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import Link from "next/link"
 import { BookOpen, Key, Box, Terminal, Bot, Network } from "lucide-react"
 import { Navbar } from "@/components/navbar"
@@ -10,6 +11,10 @@ import { BentoCard, BentoGrid } from "@/components/ui/bento-grid"
 import { CodeWindow } from "@/components/code-window"
 
 export default function DocsPage() {
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
   return (
     <main className="relative min-h-screen bg-black text-white overflow-x-hidden">
       <Navbar />

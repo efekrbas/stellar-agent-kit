@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Navbar } from "@/components/navbar"
 import { PageTransition } from "@/components/page-transition"
 import { Button } from "@/components/ui/button"
 import { LiquidMetalButton } from "@/components/ui/liquid-metal-button"
-import { Check } from "lucide-react"
+import { Check, X } from "lucide-react"
 
 const PLANS = [
   {
@@ -42,11 +42,15 @@ const PLANS = [
   },
 ]
 
+const INLINE_CONTAINER_ID = "dodo-inline-checkout"
+
 export default function PricingPage() {
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [successChecked, setSuccessChecked] = useState(false)
+  const [inlineCheckoutUrl, setInlineCheckoutUrl] = useState<string | null>(null)
+  const sdkInitialized = useRef(false)
 
   useEffect(() => {
     const paymentId = searchParams.get("payment_id")
@@ -71,6 +75,44 @@ export default function PricingPage() {
       .catch(() => {})
   }, [searchParams, successChecked])
 
+  // Inline checkout: when we have a checkout URL, load SDK and open in container
+  useEffect(() => {
+    if (!inlineCheckoutUrl || typeof window === "undefined") return
+
+    let closed = false
+    const mode = inlineCheckoutUrl.includes("test.dodopayments.com") ? "test" : "live"
+
+    import("dodopayments-checkout").then(({ DodoPayments }) => {
+      if (closed) return
+      if (!sdkInitialized.current) {
+        DodoPayments.Initialize({
+          mode,
+          displayType: "inline",
+          onEvent: (event) => {
+            if (event.event_type === "checkout.error") {
+              const msg = (event.data as { message?: string })?.message
+              setError(msg || "Checkout error")
+            }
+          },
+        })
+        sdkInitialized.current = true
+      }
+      DodoPayments.Checkout.open({
+        checkoutUrl: inlineCheckoutUrl,
+        elementId: INLINE_CONTAINER_ID,
+      })
+    })
+
+    return () => {
+      closed = true
+      import("dodopayments-checkout").then(({ DodoPayments }) => {
+        if (typeof DodoPayments.Checkout?.close === "function") {
+          DodoPayments.Checkout.close()
+        }
+      })
+    }
+  }, [inlineCheckoutUrl])
+
   const openDodoCheckout = async (planId: string) => {
     setError(null)
     setLoading(planId)
@@ -89,7 +131,14 @@ export default function PricingPage() {
         return
       }
       if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl
+        const isTestMode = data.checkoutUrl.includes("test.dodopayments.com")
+        // In test mode the SDK's iframe rejects messages from test.checkout.dodopayments.com,
+        // causing a console error. Open in new tab instead; inline works in live mode.
+        if (isTestMode) {
+          window.open(data.checkoutUrl, "_blank", "noopener,noreferrer")
+          return
+        }
+        setInlineCheckoutUrl(data.checkoutUrl)
         return
       }
       setError("No checkout URL returned")
@@ -98,6 +147,11 @@ export default function PricingPage() {
     } finally {
       setLoading(null)
     }
+  }
+
+  const closeInlineCheckout = () => {
+    setInlineCheckoutUrl(null)
+    setError(null)
   }
 
   const showSuccess = searchParams.get("success") === "1"
@@ -207,7 +261,7 @@ export default function PricingPage() {
                     </Link>
                   ) : plan.primary ? (
                     <LiquidMetalButton
-                      label={loading === plan.id ? "Redirecting…" : plan.cta}
+                      label={loading === plan.id ? "Opening…" : plan.cta}
                       onClick={() => openDodoCheckout(plan.id)}
                       disabled={!!loading}
                       fullWidth
@@ -220,13 +274,39 @@ export default function PricingPage() {
                       disabled={!!loading}
                       className="w-full rounded-full px-6 py-3"
                     >
-                      {loading === plan.id ? "Redirecting…" : plan.cta}
+                      {loading === plan.id ? "Opening…" : plan.cta}
                     </Button>
                   )}
                 </div>
               </div>
             ))}
           </div>
+
+          {inlineCheckoutUrl && (
+            <div className="mt-10 rounded-xl border border-zinc-700 bg-zinc-900/80 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-white">Complete your payment</h2>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={closeInlineCheckout}
+                  className="text-zinc-400 hover:text-white shrink-0"
+                  aria-label="Close checkout"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div
+                id={INLINE_CONTAINER_ID}
+                className="min-h-[420px] w-full"
+              />
+              <p className="mt-4 text-center text-xs text-zinc-500">
+                Secure checkout by Dodo Payments. You can close this and return to plans anytime.
+              </p>
+            </div>
+          )}
+
           <p className="mt-8 text-center text-sm text-zinc-500">
             Payments powered by Dodo Payments. After payment we store your plan; use the same session or pass
             payment_id for API gating.

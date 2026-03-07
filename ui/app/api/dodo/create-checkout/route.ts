@@ -1,24 +1,44 @@
+import DodoPayments from "dodopayments"
 import { NextResponse } from "next/server"
 
-const DODO_API_KEY = process.env.DODO_PAYMENTS_API_KEY
-const DODO_ENV = process.env.DODO_PAYMENTS_ENVIRONMENT || "test_mode"
-const BASE_URL =
-  DODO_ENV === "live_mode"
-    ? "https://live.dodopayments.com"
-    : "https://test.dodopayments.com"
-
-const PRODUCT_IDS: Record<string, string> = {
-  builder: process.env.DODO_PAYMENTS_PRODUCT_BUILDER || "",
-  pro: process.env.DODO_PAYMENTS_PRODUCT_PRO || "",
+function getConfig() {
+  const rawKey = process.env.DODO_PAYMENTS_API_KEY
+  const apiKey =
+    typeof rawKey === "string"
+      ? rawKey.trim().replace(/^["']|["']$/g, "")
+      : ""
+  const env = (
+    process.env.DODO_PAYMENTS_ENVIRONMENT ||
+    "test_mode"
+  )
+    .trim()
+    .toLowerCase()
+  const environment =
+    env === "live_mode" ? ("live_mode" as const) : ("test_mode" as const)
+  return {
+    apiKey,
+    environment,
+    productIds: {
+      builder: (process.env.DODO_PAYMENTS_PRODUCT_BUILDER || "").trim(),
+      pro: (process.env.DODO_PAYMENTS_PRODUCT_PRO || "").trim(),
+    },
+  }
 }
 
 export async function POST(req: Request) {
-  if (!DODO_API_KEY) {
+  const { apiKey, environment, productIds } = getConfig()
+
+  if (!apiKey) {
     return NextResponse.json(
-      { error: "Dodo Payments not configured. Set DODO_PAYMENTS_API_KEY." },
+      {
+        error: "Dodo Payments not configured",
+        details:
+          "DODO_PAYMENTS_API_KEY is missing or empty. Add it to .env.local (in the ui folder if you run from ui/) and restart the dev server.",
+      },
       { status: 500 }
     )
   }
+
   let body: { planId: string }
   try {
     body = await req.json()
@@ -32,61 +52,87 @@ export async function POST(req: Request) {
       { status: 400 }
     )
   }
-  const productId = PRODUCT_IDS[planId]
+  const productId = productIds[planId as keyof typeof productIds]
   if (!productId) {
     return NextResponse.json(
       {
-        error: `Product not configured for plan '${planId}'. Set DODO_PAYMENTS_PRODUCT_BUILDER and DODO_PAYMENTS_PRODUCT_PRO.`,
+        error: `Product not configured for plan '${planId}'. Set DODO_PAYMENTS_PRODUCT_BUILDER and DODO_PAYMENTS_PRODUCT_PRO in .env.local.`,
       },
       { status: 500 }
     )
   }
 
   const origin = req.headers.get("origin") || req.headers.get("referer") || ""
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (origin ? new URL(origin).origin : "http://localhost:3000")
-  const returnUrl = `${baseUrl}/pricing`
+  const appBaseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (origin ? new URL(origin).origin : "http://localhost:3000")
+  const returnUrl = `${appBaseUrl}/pricing`
 
-  const res = await fetch(`${BASE_URL}/checkouts`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${DODO_API_KEY}`,
-    },
-    body: JSON.stringify({
+  try {
+    const client = new DodoPayments({
+      bearerToken: apiKey,
+      environment,
+    })
+
+    const session = await client.checkoutSessions.create({
       product_cart: [{ product_id: productId, quantity: 1 }],
       return_url: returnUrl,
       metadata: { plan_id: planId },
-      customer: { email: "", name: "Stellar DevKit Customer" },
-    }),
-  })
+    })
 
-  if (!res.ok) {
-    const errText = await res.text()
-    let details: string
-    try {
-      const parsed = JSON.parse(errText) as { message?: string; error?: string }
-      details = parsed.message || parsed.error || errText
-    } catch {
-      details = errText || `HTTP ${res.status}`
+    const checkoutUrl =
+      session && typeof session === "object" && "checkout_url" in session
+        ? (session as { checkout_url?: string | null }).checkout_url
+        : null
+
+    if (!checkoutUrl) {
+      return NextResponse.json(
+        {
+          error: "No checkout URL returned from Dodo Payments",
+          details:
+            "Create session succeeded but checkout_url was missing. Check your Dodo product configuration.",
+        },
+        { status: 502 }
+      )
     }
+
+    return NextResponse.json({
+      checkoutUrl,
+      sessionId:
+        session && typeof session === "object" && "session_id" in session
+          ? (session as { session_id?: string }).session_id
+          : undefined,
+      planId,
+    })
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : String(err)
+    const status = err && typeof err === "object" && "status" in err ? (err as { status?: number }).status : undefined
+    console.error("[create-checkout] Dodo SDK error:", status, message, err)
+
+    const isAuthError = status === 401 || status === 403
+    const devHint =
+      process.env.NODE_ENV === "development"
+        ? ` Key length in env: ${apiKey.length}.`
+        : ""
+
+    const authChecklist = isAuthError
+      ? [
+          "Dodo keys are per-environment: use a key created in Test mode for test.dodopayments.com (our default).",
+          "In Dodo Dashboard: switch to Test mode (toggle), then Developer → API Keys → Add API Key.",
+          "Create the key with 'Write access' enabled (required for creating checkouts).",
+          "Paste the key into ui/.env.local as DODO_PAYMENTS_API_KEY (no quotes), then restart the dev server.",
+        ].join(" ")
+      : ""
+
     return NextResponse.json(
-      { error: "Dodo Payments checkout creation failed", details },
+      {
+        error: "Checkout creation failed",
+        details: isAuthError
+          ? `Dodo returned ${status}. ${authChecklist}${devHint} Raw: ${message}`
+          : message,
+      },
       { status: 502 }
     )
   }
-
-  const session = (await res.json()) as { session_id?: string; checkout_url?: string | null }
-  const checkoutUrl = session.checkout_url
-  if (!checkoutUrl) {
-    return NextResponse.json(
-      { error: "No checkout URL returned from Dodo Payments" },
-      { status: 502 }
-    )
-  }
-
-  return NextResponse.json({
-    checkoutUrl,
-    sessionId: session.session_id,
-    planId,
-  })
 }

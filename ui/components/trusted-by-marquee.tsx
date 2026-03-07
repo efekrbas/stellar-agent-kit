@@ -37,7 +37,7 @@ function LogoStrip() {
 
 export function TrustedByMarquee() {
   return (
-    <section className="relative z-20 py-16 overflow-hidden border-y border-zinc-800/60 bg-zinc-950/30">
+    <section className="relative py-16 overflow-hidden border-y border-zinc-800/60 bg-zinc-950 isolate contain-[layout_paint]">
       <p className="text-center text-sm font-medium uppercase tracking-widest text-zinc-500 mb-10">
         Trusted by
       </p>

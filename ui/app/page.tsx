@@ -59,9 +59,9 @@ export default function Home() {
       <Navbar />
       <PageTransition>
 
-      {/* Hero — centered, large (majority of viewport) with dot pattern background */}
-      <div className="relative min-h-[85vh] w-full overflow-hidden">
-        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-screen min-h-full" aria-hidden>
+      {/* Hero — full viewport so Trusted By only appears after scroll */}
+      <div className="relative z-30 min-h-screen w-full overflow-hidden isolate bg-black shrink-0">
+        <div className="absolute inset-0 left-1/2 -translate-x-1/2 w-screen min-h-full pointer-events-none" aria-hidden>
           <DotPattern
             fixed={false}
             baseColor="#71717a"
@@ -74,7 +74,7 @@ export default function Home() {
             baseOpacityMax={0.52}
           />
         </div>
-        <div id="hero" className="relative z-20 container mx-auto px-6 lg:px-12 pt-32 pb-40 min-h-[85vh] flex flex-col items-center justify-center text-center">
+        <div id="hero" className="relative z-20 container mx-auto px-6 lg:px-12 pt-32 pb-40 min-h-screen flex flex-col items-center justify-center text-center">
           <div className="flex flex-col items-center max-w-3xl mx-auto w-full">
             <div className="mb-10 md:mb-14 animate-fade-in w-fit mix-blend-screen">
             <Image
@@ -108,10 +108,12 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Trusted by — marquee of partner logos */}
-      <FadeInSection>
-        <TrustedByMarquee />
-      </FadeInSection>
+      {/* Trusted by — only in view after hero; contained so it never bleeds into hero */}
+      <div className="relative z-10 overflow-hidden shrink-0">
+        <FadeInSection>
+          <TrustedByMarquee />
+        </FadeInSection>
+      </div>
 
       {/* SDK Features — four pillars */}
       <section id="capabilities" className="relative z-20 py-20 scroll-mt-24">

@@ -7,10 +7,16 @@ The Pricing page uses [Dodo Payments](https://dodopayments.com) for checkout. Co
 - **Env name:** `DODO_PAYMENTS_API_KEY`
 - **Where:** [Dodo Dashboard](https://app.dodopayments.com/) → **Developer** → **API Keys**
 - **What:** Create an API key with **write access** so the app can create checkouts and read payments.
-- Add it to `.env.local` (or your deployment env):
+- **Important:** API keys are **per-environment**. For local/dev (default `test_mode`):
+  1. In the dashboard, **switch to Test mode** (toggle in the UI).
+  2. Then go to **Developer** → **API Keys** → **Add API Key**.
+  3. Enable **Write access** (required for creating checkouts).
+  4. Copy the key and add it to `ui/.env.local` (if you run the app from the `ui/` folder).
+- Add to `.env.local`:
   ```bash
   DODO_PAYMENTS_API_KEY=your_secret_key_here
   ```
+  No quotes around the key. Restart the dev server after changing `.env.local`.
 
 ## 2. Product IDs (required for paid plans)
 

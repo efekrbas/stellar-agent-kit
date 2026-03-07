@@ -14,10 +14,7 @@ import { NetworkSelector } from "./network-selector"
 const NAV_LINKS: { href: string; label: string; external?: boolean }[] = [
   { href: "/docs", label: "Docs" },
   { href: "/devkit", label: "DevKit" },
-  { href: "/protocols", label: "Protocols" },
-  { href: "/swap", label: "Swap" },
   { href: "/onboarding", label: "Onboarding" },
-  { href: "/chat", label: "Chat" },
   { href: "/pricing", label: "Pricing" },
 ]
 
@@ -53,7 +50,7 @@ export function Navbar() {
 
   return (
     <nav
-      className={`fixed left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-7xl transition-all duration-700 ease-in-out ${
+      className={`fixed left-1/2 -translate-x-1/2 z-50 px-4 w-max max-w-[calc(100vw-2rem)] transition-all duration-700 ease-in-out ${
         isVisible ? "top-6 opacity-100" : "-top-24 opacity-0"
       }`}
     >
@@ -66,11 +63,11 @@ export function Navbar() {
         blur={16}
         forceDark
         simpleGlass
-        className="px-6 sm:px-10 sm:pr-12 py-4 flex items-center justify-between sm:justify-center min-w-0 w-full shadow-lg shadow-black/25"
-        contentClassName="p-0 w-full flex items-center justify-between sm:justify-center gap-8 sm:gap-10 min-w-0"
+        className="px-6 sm:px-8 sm:pr-10 py-4 flex items-center justify-between sm:justify-center min-w-0 w-full shadow-lg shadow-black/25"
+        contentClassName="p-0 w-full flex items-center justify-between sm:justify-center gap-6 sm:gap-8 min-w-0"
       >
         {/* Centered on desktop: Logo + Nav + Wallet (or onboarding CTA) */}
-        <div className="hidden sm:flex items-center justify-center gap-8 sm:gap-10 min-w-0 flex-1 shrink-0">
+        <div className="hidden sm:flex items-center justify-center gap-6 sm:gap-8 min-w-0 shrink-0">
           <Link
             href="/"
             className="flex items-center gap-2 text-lg font-bold text-white hover:text-zinc-200 transition-colors duration-300 shrink-0"
