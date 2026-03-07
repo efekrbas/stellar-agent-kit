@@ -95,13 +95,6 @@ const PATHS = [
     href: "/onboarding/developers",
     percentage: 50,
   },
-  {
-    id: "enterprise",
-    title: "Businesses",
-    subtitle: "Enterprise Solution?",
-    href: "/onboarding/enterprise",
-    percentage: 75,
-  },
 ]
 
 const STATS: Array<{
@@ -220,7 +213,7 @@ export default function OnboardingPage() {
                 </p>
               </div>
               <motion.div
-                className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 items-stretch"
+                className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 items-stretch"
                 initial="hidden"
                 whileInView="visible"
                 viewport={viewport}
@@ -259,6 +252,33 @@ export default function OnboardingPage() {
                   )
                 })}
               </motion.div>
+            </FadeInSection>
+          </section>
+
+          {/* YouTube Video */}
+          <section className="relative border-b border-zinc-800/50 px-4 py-20 sm:py-28 overflow-visible">
+            <FadeInSection className="mx-auto max-w-5xl overflow-visible">
+              <div className="space-y-4 text-center mb-12">
+                <h2
+                  className="text-3xl font-bold tracking-tight text-white md:text-4xl lg:text-5xl"
+                  style={{ fontFamily: "var(--font-space-grotesk)" }}
+                >
+                  See it in action
+                </h2>
+                <p className="mx-auto max-w-xl text-zinc-400">
+                  Watch how to build on Stellar from scratch in minutes.
+                </p>
+              </div>
+              <div className="relative w-full rounded-2xl border border-zinc-800/80 shadow-2xl shadow-black/60 overflow-hidden" style={{ aspectRatio: "16/9" }}>
+                <iframe
+                  src="https://www.youtube.com/embed/CIQmLbRngx0"
+                  title="Build on Stellar"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full pointer-events-auto"
+                  loading="lazy"
+                />
+              </div>
             </FadeInSection>
           </section>
 

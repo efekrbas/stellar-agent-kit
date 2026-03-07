@@ -13,7 +13,8 @@ import { TextAnimate } from "@/components/ui/text-animate"
 const STELLAR_LEARN = "https://developers.stellar.org/docs/learn"
 const FREIGHTER = "https://www.freighter.app"
 const FREIGHTER_TUTORIAL_VIDEO = "https://youtu.be/UKmEJYdP6Mg?si=lofJKGqCnKCpuLfE"
-const XLM_FAUCET = "https://laboratory.stellar.org/#account-creator"
+const XLM_FAUCET =
+  "https://lab.stellar.org/account/fund?network=testnet&label=Testnet&horizonUrl=https://horizon-testnet.stellar.org&rpcUrl=https://soroban-testnet.stellar.org&passphrase=Test%20SDF%20Network%20%3B%20September%202015"
 const XLM_TUTORIAL_VIDEO = "https://youtu.be/ixerXWJrDqo"
 const ORBIT_TUTORIAL_VIDEO = "https://youtu.be/UKmEJYdP6Mg?si=lofJKGqCnKCpuLfE"
 const SHINY_CLASS =
@@ -162,7 +163,7 @@ export default function OnboardingBeginnersPage() {
       <Navbar />
       <PageTransition>
         <main>
-          <section className="relative flex min-h-[75vh] flex-col items-center justify-center overflow-hidden border-b border-zinc-800/50">
+          <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden border-b border-zinc-800/50">
             <div className="absolute inset-0 left-1/2 -translate-x-1/2 w-screen" aria-hidden>
               <DotPattern fixed={false} baseColor="#52525b" glowColor="#71717a" gap={22} dotSize={2.5} proximity={140} waveSpeed={0.4} baseOpacityMin={0.28} baseOpacityMax={0.48} />
             </div>

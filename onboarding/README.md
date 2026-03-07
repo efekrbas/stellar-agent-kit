@@ -2,7 +2,7 @@
 
 Stellar onboarding experience — “Choose your path” (Cascade-style) for [Orbit](https://orbitkit.fun).
 
-**In-repo:** The main Orbit app (`ui`) also serves onboarding at **`/onboarding`** (and `/onboarding/beginners`, `/onboarding/explore`, `/onboarding/enterprise`) so you can build and test in one place. The nav “Onboarding” link points there until you deploy this app to a subdomain.
+**In-repo:** The main Orbit app (`ui`) also serves onboarding at **`/onboarding`** (and `/onboarding/beginners`, `/onboarding/explore`, `/onboarding/developers`) so you can build and test in one place. The nav “Onboarding” link points there until you deploy this app to a subdomain.
 
 ## Run locally
 
