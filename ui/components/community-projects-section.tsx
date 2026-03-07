@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { ScrambleText } from "@/components/scramble-text"
 
-// Supported community projects — logos from brand/partners
 const COMMUNITY_PROJECTS = [
   { name: "Stello", href: "https://stello.io", logo: "/brand/partners/stello.png" },
   { name: "Stacy IDE", href: "https://stacyide.xyz", logo: "/brand/partners/stacy.png" },
@@ -28,7 +27,7 @@ function CommunityProjectLogo({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="group shrink-0 inline-flex items-center justify-center rounded-2xl p-4 transition-all duration-300 hover:scale-105 hover:brightness-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a78bfa] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+      className="group shrink-0 inline-flex items-center justify-center transition-all duration-300 hover:scale-105 hover:brightness-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a78bfa] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
       title={name}
       aria-label={`Open ${name}`}
     >
@@ -58,22 +57,27 @@ function CommunityProjectLogo({
 
 export function CommunityProjectsSection() {
   return (
-    <section id="community-projects" className="relative z-20 py-20 scroll-mt-24">
-      <div className="text-center mb-12">
-        <h2
-          className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-white uppercase mb-4"
-          style={{ fontFamily: "var(--font-space-grotesk)" }}
-        >
-          <ScrambleText text="SUPPORTED ECOSYSTEM PROJECTS" as="span" />
-        </h2>
-        <p className="text-zinc-400 text-lg max-w-xl mx-auto" style={{ fontFamily: "var(--font-space-grotesk)" }}>
-          Community-built projects that integrate with Stellar DevKit.
-        </p>
-      </div>
-      <div className="flex flex-nowrap items-center justify-center gap-8 md:gap-12 px-4 overflow-hidden">
-        {COMMUNITY_PROJECTS.map((p) => (
-          <CommunityProjectLogo key={p.name} name={p.name} href={p.href} logo={p.logo} />
-        ))}
+    <section
+      id="community-projects"
+      className="relative z-20 w-full scroll-mt-24"
+    >
+      <div className="container mx-auto max-w-5xl px-6 lg:px-12 py-20">
+        <div className="text-center mb-12">
+          <h2
+            className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-white uppercase mb-4"
+            style={{ fontFamily: "var(--font-space-grotesk)" }}
+          >
+            <ScrambleText text="SUPPORTED ECOSYSTEM PROJECTS" as="span" />
+          </h2>
+          <p className="text-zinc-400 text-lg max-w-xl mx-auto" style={{ fontFamily: "var(--font-space-grotesk)" }}>
+            Community-built projects that integrate with Stellar DevKit.
+          </p>
+        </div>
+        <div className="flex flex-nowrap items-center justify-center gap-8 md:gap-12 px-4 overflow-hidden">
+          {COMMUNITY_PROJECTS.map((p) => (
+            <CommunityProjectLogo key={p.name} name={p.name} href={p.href} logo={p.logo} />
+          ))}
+        </div>
       </div>
     </section>
   )

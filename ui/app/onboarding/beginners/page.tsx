@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { Navbar } from "@/components/navbar"
@@ -14,28 +14,66 @@ const STELLAR_LEARN = "https://developers.stellar.org/docs/learn"
 const FREIGHTER = "https://www.freighter.app"
 const FREIGHTER_TUTORIAL_VIDEO = "https://youtu.be/UKmEJYdP6Mg?si=lofJKGqCnKCpuLfE"
 const XLM_FAUCET = "https://laboratory.stellar.org/#account-creator"
-
+const XLM_TUTORIAL_VIDEO = "https://youtu.be/ixerXWJrDqo"
+const ORBIT_TUTORIAL_VIDEO = "https://youtu.be/UKmEJYdP6Mg?si=lofJKGqCnKCpuLfE"
 const SHINY_CLASS =
   "rounded-xl border border-white/10 bg-white/5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] transition-all duration-300 hover:border-white/20 hover:bg-white/10"
 
-const STEPS = [
+const DEFI_PROTOCOLS = [
   {
-    step: 1,
-    title: "Choose a wallet",
-    description: "A wallet holds your XLM and lets you sign transactions. Freighter is a popular browser extension on Stellar.",
-    links: [{ name: "Freighter", href: FREIGHTER, desc: "Browser extension" }],
+    name: "SoroSwap",
+    href: "https://soroswap.finance",
+    logo: "/brand/partners/soroswap.svg",
+    description: "The native decentralized exchange on Stellar. Swap any token pair with deep liquidity.",
   },
   {
-    step: 2,
-    title: "Get XLM",
-    description: "You need a little XLM for transaction fees. Use the lab faucet for testnet or an exchange for mainnet.",
-    links: [{ name: "Get test XLM", href: XLM_FAUCET, desc: "Testnet faucet" }],
+    name: "Blend",
+    href: "https://blend.capital",
+    logo: "/brand/partners/blend.svg",
+    description: "Supply assets to earn yield or borrow against your collateral on Stellar.",
+  },
+  {
+    name: "Allbridge",
+    href: "https://allbridge.io",
+    logo: "/brand/partners/allbridge.svg",
+    description: "Bridge tokens between Stellar and other major blockchains quickly and cheaply.",
+  },
+]
+
+const STEPS = [
+  {
+    step: 4,
+    title: "Try Stellar DeFi",
+    description: "Swap, lend, borrow, and bridge — explore the growing DeFi ecosystem built on Stellar.",
+    links: [],
+    showProtocols: true,
   },
   {
     step: 3,
     title: "Explore DeFi on Orbit",
     description: "Swap tokens, supply or borrow, and try real Stellar apps — all from Orbit.",
-    links: [{ name: "Try Orbit", href: "/swap", desc: "Try it live", internal: true }],
+    links: [
+      { name: "Try Orbit", href: "/swap", desc: "Try it live", internal: true },
+      { name: "Watch tutorial", href: ORBIT_TUTORIAL_VIDEO, desc: "Video guide" },
+    ],
+  },
+  {
+    step: 2,
+    title: "Get XLM",
+    description: "You need a little XLM for transaction fees. Use the lab faucet for testnet or an exchange for mainnet.",
+    links: [
+      { name: "Get test XLM", href: XLM_FAUCET, desc: "Testnet faucet" },
+      { name: "Watch tutorial", href: XLM_TUTORIAL_VIDEO, desc: "Video guide" },
+    ],
+  },
+  {
+    step: 1,
+    title: "Choose a wallet",
+    description: "A wallet holds your XLM and lets you sign transactions. Freighter is a popular browser extension on Stellar.",
+    links: [
+      { name: "Freighter", href: FREIGHTER, desc: "Browser extension" },
+      { name: "Watch tutorial", href: FREIGHTER_TUTORIAL_VIDEO, desc: "Video guide" },
+    ],
   },
 ]
 
@@ -44,11 +82,13 @@ function AnimatedStepCard({
   title,
   description,
   links,
+  showProtocols,
 }: {
   step: number
   title: string
   description: string
   links: Array<{ name: string; href: string; desc: string; internal?: boolean }>
+  showProtocols?: boolean
 }) {
   return (
     <div
@@ -56,18 +96,48 @@ function AnimatedStepCard({
       style={{ fontFamily: "var(--font-space-grotesk)" }}
     >
       <div className="flex items-baseline gap-3">
-        <span className="text-3xl font-bold tabular-nums text-white sm:text-4xl">{step}.</span>
-        <h3 className="text-2xl font-semibold text-white sm:text-3xl">{title}</h3>
+        <span className="text-4xl font-bold tabular-nums text-white sm:text-5xl">{step}.</span>
+        <h3 className="text-3xl font-semibold text-white sm:text-4xl">{title}</h3>
       </div>
-      <p className="text-lg text-zinc-400 sm:text-xl">{description}</p>
+      <p className="text-xl text-zinc-400 sm:text-2xl">{description}</p>
+
+      {showProtocols && (
+        <div className="mt-6 grid grid-cols-3 gap-x-8 gap-y-10">
+          {DEFI_PROTOCOLS.map((p) => (
+            <a
+              key={p.name}
+              href={p.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex flex-col items-center text-center gap-4 transition-opacity hover:opacity-80"
+              style={{ fontFamily: "var(--font-space-grotesk)" }}
+            >
+              <Image
+                src={p.logo}
+                alt={p.name}
+                width={80}
+                height={80}
+                className="w-20 h-20 object-contain"
+                unoptimized={p.logo.startsWith("http")}
+              />
+              <div className="flex flex-col gap-1.5">
+                <span className="text-base font-semibold text-white">{p.name}</span>
+                <p className="text-sm text-zinc-500 leading-relaxed">{p.description}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+
       <div className="mt-1 flex flex-wrap gap-3">
-        {links.map((link: { name: string; href: string; desc: string; internal?: boolean }) =>
+        {links.map((link) =>
           link.internal ? (
             <LiquidMetalButton
               key={link.name}
               href={link.href}
               label={link.name}
               width={150}
+              noGradient={link.name === "Watch tutorial"}
             />
           ) : (
             <LiquidMetalButton
@@ -77,6 +147,7 @@ function AnimatedStepCard({
               rel="noopener noreferrer"
               label={link.name}
               width={150}
+              noGradient={link.name === "Watch tutorial"}
             />
           )
         )}
@@ -91,16 +162,16 @@ export default function OnboardingBeginnersPage() {
       <Navbar />
       <PageTransition>
         <main>
-          <section className="relative overflow-hidden border-b border-zinc-800/50">
+          <section className="relative flex min-h-[75vh] flex-col items-center justify-center overflow-hidden border-b border-zinc-800/50">
             <div className="absolute inset-0 left-1/2 -translate-x-1/2 w-screen" aria-hidden>
               <DotPattern fixed={false} baseColor="#52525b" glowColor="#71717a" gap={22} dotSize={2.5} proximity={140} waveSpeed={0.4} baseOpacityMin={0.28} baseOpacityMax={0.48} />
             </div>
-            <div className="relative z-10 mx-auto max-w-3xl px-4 pt-24 pb-16 text-center sm:pt-28 sm:pb-20">
+            <div className="relative z-10 mx-auto max-w-3xl px-4 py-24 text-center sm:py-32">
               <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl lg:text-6xl" style={{ fontFamily: "var(--font-space-grotesk)" }}>
                 New to Crypto
               </h1>
-              <p className="mt-3 text-lg text-zinc-400">A short guide to get you from zero to using Stellar and Orbit.</p>
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <p className="mt-4 text-lg text-zinc-400 max-w-xl mx-auto">A short guide to get you from zero to using Stellar and Orbit.</p>
+              <div className="mt-10 flex flex-wrap justify-center gap-3">
                 <LiquidMetalButton
                   href={FREIGHTER}
                   target="_blank"
@@ -114,6 +185,7 @@ export default function OnboardingBeginnersPage() {
                   rel="noopener noreferrer"
                   label="Watch tutorial"
                   width={160}
+                  noGradient
                 />
               </div>
             </div>
@@ -133,13 +205,14 @@ export default function OnboardingBeginnersPage() {
               </TextAnimate>
               <p className="mt-2 text-zinc-400">Follow these steps to go from zero to using Stellar and Orbit.</p>
               <AnimatedList delay={800} className="mt-8 w-full gap-4">
-                {STEPS.map(({ step, title, description, links }) => (
+                {STEPS.map(({ step, title, description, links, showProtocols }) => (
                   <AnimatedStepCard
                     key={step}
                     step={step}
                     title={title}
                     description={description}
                     links={links}
+                    showProtocols={showProtocols}
                   />
                 ))}
               </AnimatedList>
@@ -150,7 +223,7 @@ export default function OnboardingBeginnersPage() {
             <div className="mx-auto max-w-3xl">
               <div className={`rounded-2xl p-6 sm:p-8 ${SHINY_CLASS}`}>
                 <h3 className="text-lg font-semibold text-white">Learn more</h3>
-                <p className="mt-2 text-sm text-zinc-400">Stellar’s official docs cover concepts, wallets, and building on the network.</p>
+                <p className="mt-2 text-sm text-zinc-400">Stellar's official docs cover concepts, wallets, and building on the network.</p>
                 <a href={STELLAR_LEARN} target="_blank" rel="noopener noreferrer" className={`mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-white ${SHINY_CLASS}`}>
                   Stellar documentation
                   <ArrowRight className="h-4 w-4" />

@@ -195,6 +195,21 @@ export function DotPattern({
     }
   }, [draw])
 
+  // Rebuild grid and redraw when tab becomes visible again (e.g. after lock screen).
+  // Browsers throttle/suspend canvas and rAF when hidden; the canvas can be cleared or stale.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        startTimeRef.current = Date.now()
+        buildGrid()
+        if (animationRef.current != null) cancelAnimationFrame(animationRef.current)
+        animationRef.current = requestAnimationFrame(draw)
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
+    return () => document.removeEventListener("visibilitychange", handleVisibility)
+  }, [buildGrid, draw])
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       const canvas = canvasRef.current

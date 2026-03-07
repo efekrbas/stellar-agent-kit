@@ -285,23 +285,20 @@ export default function Home() {
 
               {/* Card 1: Address input — large */}
               <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-7">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600 mb-5">Address Input</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-white mb-5 text-center">Address Input</p>
                 <div className="flex items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3.5 mb-5">
                   <div className="w-8 h-8 rounded-full bg-zinc-700 shrink-0 flex items-center justify-center text-xs font-bold text-zinc-300">G</div>
                   <span className="flex-1 font-mono text-sm text-zinc-300 truncate">GABCD ... XYZ9</span>
                   <div className="w-2.5 h-2.5 rounded-full bg-zinc-500 shrink-0" />
                 </div>
-                <p className="text-sm text-zinc-500 leading-relaxed">
+                <p className="text-sm text-zinc-500 leading-relaxed text-center">
                   Shows Stellar account identicons and truncates public keys. Supports paste, validation, and copy.
-            </p>
-          </div>
+                </p>
+              </div>
 
               {/* Card 2: Swap quote — large */}
               <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-7">
-                <div className="flex items-center justify-between mb-5">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Swap Quote</p>
-                  <span className="text-[10px] font-mono text-zinc-400 border border-zinc-700 rounded px-2 py-0.5 tracking-wide">VERIFIED</span>
-                </div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-white mb-5 text-center">Swap Quote</p>
                 <div className="flex items-center gap-4 mb-5">
                   <div className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3.5 text-center">
                     <p className="text-lg font-semibold font-mono text-white">10 XLM</p>
@@ -313,7 +310,7 @@ export default function Home() {
                     <p className="text-xs text-zinc-600 mt-0.5">You receive</p>
                   </div>
                 </div>
-                <p className="text-sm text-zinc-500 leading-relaxed">Route: SoroSwap · Slippage 0.5% · Estimated fee 0.001 XLM</p>
+                <p className="text-sm text-zinc-500 leading-relaxed text-center">Route: SoroSwap · Slippage 0.5% · Estimated fee 0.001 XLM</p>
               </div>
 
             </div>

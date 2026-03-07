@@ -4,14 +4,17 @@ import { type ReactNode } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { motion } from "motion/react"
-import {
-  ExternalLink,
-} from "lucide-react"
+import { Copy, Check, Github, ExternalLink } from "lucide-react"
+import { useState } from "react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { DotPattern } from "@/components/dot-pattern"
 import { PageTransition } from "@/components/page-transition"
 import { NumberTicker } from "@/components/ui/number-ticker"
+import { LiquidMetalButton } from "@/components/ui/liquid-metal-button"
+import { toast } from "sonner"
+
+const NPX_COMMAND = "npx create-stellar-devkit-app"
 
 const viewport = { once: true, amount: 0.12 }
 const transition = { duration: 0.55, ease: "easeOut" as const }
@@ -114,49 +117,92 @@ const STATS: Array<{
   { label: "TPS", value: 1000, suffix: "+" },
 ]
 
+function CopyNpxButton() {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(NPX_COMMAND)
+      setCopied(true)
+      toast.success("Copied to clipboard!")
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error("Failed to copy")
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="inline-flex items-center gap-2 rounded-full border border-zinc-500/70 bg-white/5 px-5 py-3 text-sm font-mono text-zinc-200 transition-colors hover:border-zinc-400 hover:bg-white/10"
+      style={{ fontFamily: "var(--font-geist-mono)" }}
+    >
+      <span>{NPX_COMMAND}</span>
+      {copied
+        ? <Check className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+        : <Copy className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+      }
+    </button>
+  )
+}
+
 export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <Navbar />
       <PageTransition>
         <main>
-          {/* Hero — Stellar logo + Welcome + tagline */}
-          <section className="relative overflow-hidden border-b border-zinc-800/50">
-            <div className="absolute inset-0 left-1/2 -translate-x-1/2 w-screen" aria-hidden>
+          {/* Hero — exact match of landing page hero, different text + buttons */}
+          <div className="relative z-30 min-h-screen w-full overflow-hidden isolate bg-black shrink-0">
+            <div className="absolute inset-0 left-1/2 -translate-x-1/2 w-screen min-h-full pointer-events-none" aria-hidden>
               <DotPattern
                 fixed={false}
-                baseColor="#52525b"
-                glowColor="#71717a"
+                baseColor="#71717a"
+                glowColor="#a78bfa"
                 gap={22}
                 dotSize={2.5}
                 proximity={140}
                 waveSpeed={0.4}
-                baseOpacityMin={0.28}
-                baseOpacityMax={0.48}
+                baseOpacityMin={0.32}
+                baseOpacityMax={0.52}
               />
             </div>
-            <FadeInSection className="relative z-10 mx-auto max-w-3xl px-4 pt-28 pb-20 text-center sm:pt-32 sm:pb-28">
-              <div className="mx-auto w-fit mix-blend-screen">
-                <Image
-                  src="/stellar-logo.png"
-                  alt="Stellar"
-                  width={380}
-                  height={98}
-                  className="h-20 w-auto sm:h-24 md:h-28 lg:h-32 xl:h-36 object-contain"
-                  priority
-                />
+            <div className="relative z-20 container mx-auto px-6 lg:px-12 pt-32 pb-40 min-h-screen flex flex-col items-center justify-center text-center">
+              <div className="flex flex-col items-center max-w-3xl mx-auto w-full">
+                <div className="mb-10 md:mb-14 animate-fade-in w-fit mix-blend-screen">
+                  <Image
+                    src="/stellar-logo.png"
+                    alt="Stellar"
+                    width={300}
+                    height={77}
+                    className="h-14 w-auto sm:h-16 md:h-20 lg:h-24 xl:h-28 object-contain object-center"
+                    priority
+                  />
+                </div>
+                <p
+                  className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-zinc-400 mb-12 md:mb-14 animate-fade-in-up animation-delay-200 font-semibold tracking-tight leading-tight"
+                  style={{ fontFamily: "var(--font-space-grotesk)" }}
+                >
+                  Build the next generation of apps on Stellar.
+                </p>
+                <div className="flex flex-col items-center gap-4 animate-fade-in-up animation-delay-400">
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <a
+                      href="https://github.com/stellar/stellar-agent-kit"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group inline-flex items-center justify-center rounded-full bg-white text-black px-8 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.02]"
+                      style={{ fontFamily: "var(--font-space-grotesk)" }}
+                    >
+                      <Github className="mr-2 h-5 w-5" />
+                      GitHub
+                    </a>
+                    <LiquidMetalButton href="/docs" label="Docs" width={80} />
+                  </div>
+                  <CopyNpxButton />
+                </div>
               </div>
-              <h1
-                className="mt-8 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl lg:text-6xl"
-                style={{ fontFamily: "var(--font-space-grotesk)" }}
-              >
-                Welcome to Stellar
-              </h1>
-              <p className="mt-4 text-lg text-zinc-400 sm:text-xl" style={{ fontFamily: "var(--font-space-grotesk)" }}>
-                The fast, scalable network for payments and DeFi. Choose your path to join the future of decentralized applications.
-              </p>
-            </FadeInSection>
-          </section>
+            </div>
+          </div>
 
           {/* Choose Your Path */}
           <section id="paths" className="relative scroll-mt-24 border-b border-zinc-800/50 px-4 py-20 sm:py-28">
