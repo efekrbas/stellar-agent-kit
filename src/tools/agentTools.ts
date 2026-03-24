@@ -6,11 +6,6 @@ import {
   type QuoteResponse,
   type Asset,
 } from "../defi/index.js";
-
-const MAINNET_ASSETS = {
-  XLM: "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA",
-  USDC: "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75",
-} as const;
 import {
   Keypair,
   Asset as StellarAsset,
@@ -20,6 +15,11 @@ import {
   Networks,
   Horizon,
 } from "@stellar/stellar-sdk";
+
+const MAINNET_ASSETS = {
+  XLM: "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA",
+  USDC: "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75",
+} as const;
 
 /** Resolve "XLM" | "USDC" | contractId (C...) to Asset (mainnet only). */
 function resolveAssetSymbol(symbol: string): Asset {
@@ -34,7 +34,6 @@ function resolveAssetSymbol(symbol: string): Asset {
 
 /** Convert human amount to raw units (7 decimals for XLM, 6 for USDC/AUSDC on testnet). */
 function toRawAmount(amount: string, assetSymbol: string): string {
-  // Extract just the number part, removing any asset symbols
   const a = amount.trim().replace(/\s*(XLM|USDC|AUSDC)$/i, '');
   if (!/^\d+(\.\d+)?$/.test(a)) return a;
   const upper = assetSymbol.trim().toUpperCase();
@@ -60,14 +59,10 @@ export const tools = [
       address: string;
       network?: "testnet" | "mainnet";
     }) => {
-      const net = network ?? "mainnet";
-      
-      // Pre-validate address
       if (!address || address.length !== 56 || !address.startsWith('G')) {
         throw new Error(`Invalid Stellar address. Must be 56 characters starting with G.`);
       }
-      
-      const config = getNetworkConfig(net);
+      const config = getNetworkConfig(network);
       const client = new StellarClient(config);
       const balances = await client.getBalance(address);
       return { balances };
@@ -99,51 +94,22 @@ export const tools = [
       network: "mainnet";
       privateKey?: string;
     }) => {
-      
-      // Pre-validate address
       if (!address || address.length !== 56 || !address.startsWith('G')) {
         throw new Error(`Invalid Stellar address. Must be 56 characters starting with G.`);
       }
-
-      // Pre-validate private key if provided
       if (privateKey && (privateKey.length !== 56 || !privateKey.startsWith('S'))) {
-        throw new Error(`Invalid private key. Must be exactly 56 characters starting with S. Got ${privateKey?.length || 0} characters. Please provide the complete private key.`);
+        throw new Error(`Invalid private key. Must be exactly 56 characters starting with S.`);
       }
-      
       const config = getNetworkConfig();
       const soroSwapClient = new SoroSwapClient(config);
-
       const from = resolveAssetSymbol(fromAsset.trim());
       const to = resolveAssetSymbol(toAsset.trim());
       const rawAmount = toRawAmount(amount, fromAsset.trim());
 
       let quote: QuoteResponse;
       try {
-        // For quotes, don't pass sourceAddress since it's not required and causes validation issues
-        // Only pass sourceAddress when actually executing swaps
         quote = await soroSwapClient.getQuote(from, to, rawAmount);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (msg.includes("invalid checksum") || msg.includes("invalid encoded")) {
-          throw new Error(
-            "Swap quote failed: invalid key or contract format. Use XLM or USDC, no secret key for quote only."
-          );
-        }
-        if (
-          msg.includes("SOROSWAP_API_KEY") ||
-          msg.includes("Quote via contract") ||
-          msg.includes("MismatchingParameterLen")
-        ) {
-          throw new Error(
-            "Swap quotes need SOROSWAP_API_KEY. Get an API key from the SoroSwap console and set it to get XLM/AUSDC quotes."
-          );
-        }
-        if (msg.includes("Invalid Stellar address") || msg.includes("No path found")) {
-          // Provide a helpful message for testnet liquidity issues
-          throw new Error(
-            `No liquidity available for ${fromAsset} → ${toAsset}. Try different pairs or check SoroSwap for available liquidity pools.`
-          );
-        }
         throw err;
       }
 
@@ -151,31 +117,16 @@ export const tools = [
         return {
           success: false as const,
           quote,
-          message:
-            "No privateKey provided. Provide privateKey to execute the swap, or omit for quote only.",
+          message: "No privateKey provided. Provide privateKey to execute the swap, or omit for quote only.",
         };
       }
-
 
       let result: { hash: string; status: string };
       try {
         result = await soroSwapClient.executeSwap(privateKey, quote, "mainnet");
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.log(`[SWAP ERROR] ${msg}`); // Add detailed error logging
-        if (msg.includes("invalid checksum") || msg.includes("invalid encoded")) {
-          throw new Error(
-            "Swap execution failed: use secret key (S...) not address (G...), or omit for quote only."
-          );
-        }
-        if (msg.includes("SoroSwap build failed")) {
-          throw new Error(
-            `SoroSwap API error: ${msg}. This might be a temporary issue with the SoroSwap service. Try again in a few minutes or try a smaller amount.`
-          );
-        }
-        throw new Error(`Swap failed: ${msg}`);
+        throw new Error(`Swap failed: ${err instanceof Error ? err.message : String(err)}`);
       }
-
 
       return {
         success: true as const,
@@ -205,20 +156,17 @@ export const tools = [
       network: "testnet" | "mainnet";
       privateKey: string;
     }) => {
-      // Pre-validate address
       if (!address || address.length !== 56 || !address.startsWith('G')) {
         throw new Error(`Invalid Stellar address. Must be 56 characters starting with G.`);
       }
-
-      // Pre-validate private key
       if (!privateKey || privateKey.length !== 56 || !privateKey.startsWith('S')) {
         throw new Error(`Invalid private key. Must be exactly 56 characters starting with S.`);
       }
 
       const config = getNetworkConfig();
       const server = new Horizon.Server(config.horizonUrl);
-      
       const MAINNET_USDC_ISSUER = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
+      
       let asset: StellarAsset;
       if (assetCode.toUpperCase() === "USDC") {
         asset = new StellarAsset(assetCode.toUpperCase(), MAINNET_USDC_ISSUER);
@@ -229,48 +177,23 @@ export const tools = [
       try {
         const keypair = Keypair.fromSecret(privateKey);
         const account = await server.loadAccount(address);
-        
-        // Check if trustline already exists
         const existingTrustline = account.balances.find(
-          (balance: any) => 
-            balance.asset_code === assetCode.toUpperCase() && 
-            balance.asset_issuer === asset.getIssuer()
+          (balance: any) => balance.asset_code === assetCode.toUpperCase() && balance.asset_issuer === asset.getIssuer()
         );
-        
         if (existingTrustline) {
-          return {
-            success: true as const,
-            message: `Trustline for ${assetCode.toUpperCase()} already exists`,
-            existing: true,
-          };
+          return { success: true as const, message: `Trustline for ${assetCode.toUpperCase()} already exists`, existing: true };
         }
 
-        // Create trustline transaction
-        const networkPassphrase = Networks.PUBLIC;
-        const transaction = new TransactionBuilder(account, {
-          fee: BASE_FEE,
-          networkPassphrase,
-        })
-          .addOperation(
-            Operation.changeTrust({
-              asset: asset,
-            })
-          )
+        const transaction = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: Networks.PUBLIC })
+          .addOperation(Operation.changeTrust({ asset }))
           .setTimeout(30)
           .build();
 
         transaction.sign(keypair);
         const result = await server.submitTransaction(transaction);
-
-        return {
-          success: true as const,
-          txHash: result.hash,
-          message: `Trustline created for ${assetCode.toUpperCase()}`,
-          existing: false,
-        };
+        return { success: true as const, txHash: result.hash, message: `Trustline created for ${assetCode.toUpperCase()}`, existing: false };
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`Failed to create trustline: ${message}`);
+        throw new Error(`Failed to create trustline: ${error instanceof Error ? error.message : String(error)}`);
       }
     },
   },
@@ -300,36 +223,82 @@ export const tools = [
       assetIssuer?: string;
       network?: "mainnet";
     }) => {
-      if (!privateKey || privateKey.length !== 56 || !privateKey.startsWith("S")) {
-        throw new Error("Invalid private key. Must be exactly 56 characters starting with S.");
-      }
-      if (!destination || destination.length !== 56 || !destination.startsWith("G")) {
-        throw new Error("Invalid destination. Must be a 56-character Stellar address (G...).");
-      }
+      if (!privateKey || privateKey.startsWith("S") === false) throw new Error("Invalid private key.");
+      if (!destination || destination.startsWith("G") === false) throw new Error("Invalid destination.");
+
       const MAINNET_USDC_ISSUER = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
       const code = assetCode?.trim().toUpperCase();
-      const issuer = assetIssuer?.trim();
+      let issuer = assetIssuer?.trim();
+
       if (code && code !== "XLM" && !issuer) {
-        if (code === "USDC") {
-          // Allow USDC without explicit issuer (use mainnet issuer)
-          assetIssuer = MAINNET_USDC_ISSUER;
-        } else {
-          throw new Error("assetIssuer is required for custom assets other than USDC.");
-        }
+        if (code === "USDC") issuer = MAINNET_USDC_ISSUER;
+        else throw new Error("assetIssuer is required for custom assets.");
       }
+
       const config = getNetworkConfig(network);
       const client = new StellarClient(config);
-      const result = await client.sendPayment(
-        privateKey,
-        destination,
+      const result = await client.sendPayment(privateKey, destination, amount, code && code !== "XLM" ? code : undefined, issuer);
+      return { success: true as const, txHash: result.hash, message: `Payment sent: ${amount} ${code || "XLM"} to ${destination.slice(0, 8)}...` };
+    },
+  },
+  {
+    name: "create_claimable_balance",
+    description: "Send assets that the recipient can claim later. Useful if the recipient hasn't set up a trustline yet.",
+    parameters: z.object({
+      privateKey: z.string().describe("Your 56-character secret key (S...)"),
+      recipient: z.string().describe("The Stellar address (G...) authorized to claim the balance"),
+      amount: z.string().describe("Amount to send"),
+      assetCode: z.string().optional().describe("Asset code (XLM by default)"),
+      assetIssuer: z.string().optional().describe("Issuer address (required for custom assets except USDC)"),
+    }),
+    execute: async ({
+      privateKey,
+      recipient,
+      amount,
+      assetCode,
+      assetIssuer,
+    }: {
+      privateKey: string;
+      recipient: string;
+      amount: string;
+      assetCode?: string;
+      assetIssuer?: string;
+    }) => {
+      const config = getNetworkConfig("mainnet");
+      const server = new Horizon.Server(config.horizonUrl);
+      const keypair = Keypair.fromSecret(privateKey);
+      const account = await server.loadAccount(keypair.publicKey());
+
+      const code = assetCode?.trim().toUpperCase();
+      const MAINNET_USDC_ISSUER = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
+      
+      let asset: StellarAsset;
+      if (!code || code === "XLM") {
+        asset = StellarAsset.native();
+      } else {
+        const issuer = (code === "USDC" && !assetIssuer) ? MAINNET_USDC_ISSUER : assetIssuer;
+        if (!issuer) throw new Error("assetIssuer is required for custom assets.");
+        asset = new StellarAsset(code, issuer);
+      }
+
+      const operation = Operation.createClaimableBalance({
+        asset,
         amount,
-        code && code !== "XLM" ? code : undefined,
-        assetIssuer || (code === "USDC" ? MAINNET_USDC_ISSUER : undefined)
-      );
+        claimants: [new Horizon.Claimant(recipient, Operation.canClaimUntil("0"))],
+      });
+
+      const transaction = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: Networks.PUBLIC })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
+
+      transaction.sign(keypair);
+      const result = await server.submitTransaction(transaction);
+
       return {
         success: true as const,
         txHash: result.hash,
-        message: `Payment sent: ${amount} ${code || "XLM"} to ${destination.slice(0, 8)}...`,
+        message: `Claimable balance of ${amount} ${code || "XLM"} created for ${recipient.slice(0, 8)}...`,
       };
     },
   },
@@ -361,28 +330,18 @@ export const tools = [
 
       try {
         const quote = await soroSwapClient.getQuote(from, to, rawAmount);
-        
-        // Convert back to human-readable amounts
         const fromDecimals = fromAsset.trim().toUpperCase() === "XLM" ? 7 : 6;
         const toDecimals = toAsset.trim().toUpperCase() === "XLM" ? 7 : 6;
-        
         const expectedInHuman = (parseInt(quote.expectedIn) / Math.pow(10, fromDecimals)).toFixed(fromDecimals);
         const expectedOutHuman = (parseInt(quote.expectedOut) / Math.pow(10, toDecimals)).toFixed(toDecimals);
 
         return {
           success: true as const,
-          quote: {
-            fromAsset: fromAsset.trim().toUpperCase(),
-            toAsset: toAsset.trim().toUpperCase(),
-            amountIn: expectedInHuman,
-            amountOut: expectedOutHuman,
-            route: quote.route,
-          },
+          quote: { fromAsset: fromAsset.trim().toUpperCase(), toAsset: toAsset.trim().toUpperCase(), amountIn: expectedInHuman, amountOut: expectedOutHuman, route: quote.route },
           message: `Quote: ${expectedInHuman} ${fromAsset.trim().toUpperCase()} → ${expectedOutHuman} ${toAsset.trim().toUpperCase()}`,
         };
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`Failed to get quote: ${message}`);
+        throw new Error(`Failed to get quote: ${error instanceof Error ? error.message : String(error)}`);
       }
     },
   },
