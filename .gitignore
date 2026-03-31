@@ -1,7 +1,6 @@
 .env.local
 node_modules
 .next
-/mantle-devkit-main
 .gitignore
 .env.local
 ui/.env.local
