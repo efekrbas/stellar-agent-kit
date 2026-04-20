@@ -11,6 +11,7 @@ import {
 
 export { createPaymentRequiredResponse, processPaymentMiddleware } from "./middleware.js";
 export { verifyPaymentOnChain } from "./verify.js";
+export { replayCache, ReplayCache } from "./replay.js";
 export type { X402StellarOptions, PaymentRequiredResponse } from "./types.js";
 
 /** Express-style request (headers) and response (status + json). */

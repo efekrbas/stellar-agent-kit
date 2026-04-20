@@ -3,6 +3,8 @@
  */
 
 import type { X402StellarOptions } from "./types.js";
+import { replayCache } from "./replay.js";
+
 
 const HORIZON = {
   testnet: "https://horizon-testnet.stellar.org",
@@ -47,6 +49,15 @@ export async function verifyPaymentOnChain(
   options: X402StellarOptions
 ): Promise<{ valid: boolean; error?: string }> {
   const base = HORIZON[options.network];
+
+  // Replay protection: reject already-verified hashes
+  if (replayCache.has(txHash)) {
+    return {
+      valid: false,
+      error: "Transaction hash already used — replay attack prevented",
+    };
+  }
+
   let tx: HorizonTransaction;
   try {
     const res = await fetch(`${base}/transactions/${txHash}`);
@@ -75,8 +86,22 @@ export async function verifyPaymentOnChain(
     if (op.to !== options.destination) continue;
     const amount = parseFloat(op.amount);
     if (amount < requiredAmount) continue;
-    if (isNative && op.asset_type === "native") return { valid: true };
-    if (!isNative && options.issuer && op.asset_type !== "native" && op.asset_code === options.assetCode && op.asset_issuer === options.issuer) return { valid: true };
+    if (isNative && op.asset_type === "native") {
+      replayCache.set(txHash);
+      return { valid: true };
+    }
+
+    if (
+      !isNative &&
+      options.issuer &&
+      op.asset_type !== "native" &&
+      op.asset_code === options.assetCode &&
+      op.asset_issuer === options.issuer
+    ) {
+      replayCache.set(txHash);
+      return { valid: true };
+    }
+
   }
   return { valid: false, error: "No matching payment to destination with required amount/asset" };
 }
