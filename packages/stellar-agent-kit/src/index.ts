@@ -32,3 +32,12 @@ export {
   type LendingResult,
 } from "./lending/index.js";
 export { FXDAO_MAINNET, ALLBRIDGE_CORE_STELLAR_DOCS } from "./config/protocols.js";
+export {
+  validateStellarEnv,
+  validateX402Env,
+  validateMcpEnv,
+  StellarEnvSchema,
+  X402EnvSchema,
+  SoroSwapEnvSchema,
+  McpEnvSchema,
+} from "./config/env.js";
